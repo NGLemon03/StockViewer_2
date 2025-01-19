@@ -16,21 +16,21 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from config import work_dir
 
-# 配置 chrome options（此示例假設已經啟用Chrome遠端調試埠）
+# 初始化 WebDriver,強制使用chrome_deugger
 options = webdriver.ChromeOptions()
 options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-
 driver = webdriver.Chrome(options=options)
 
+# 使用 stealth 函數來避免被目標網站的檢測到使用自動化工具
 stealth(driver,
-        languages=["zh-TW", "zh"],
-        vendor="Google Inc.",
-        platform="Win32",
-        webgl_vendor="Intel Inc.",
-        renderer="Intel Iris OpenGL Engine",
-        fix_hairline=True,
+        languages=["zh-TW", "zh"],    # 設定瀏覽器語言
+        vendor="Google Inc.",         # 設定裝置的供應商
+        platform="Win32",             # 設定作業系統平台
+        webgl_vendor="Intel Inc.",    # WebGL 渲染器供應商
+        renderer="Intel Iris OpenGL Engine",  # 具體的渲染器
+        fix_hairline=True,            # 修正線條問題
         )
-
+# 強制更新設定,如果設為 True 則無視本地文件直接重新抓取數據
 force_update = False
 fetch_delay = 10
 
@@ -41,11 +41,11 @@ def random_sleep(min_seconds=5, max_seconds=10):
 
 def save_html_nolink(driver, selector, file_path, delay=5):
     """
-    僅抓取指定 selector 的 HTML (outerHTML)，不跳轉
-    若檔案已存在且不強制更新，則直接跳過。
+    僅抓取指定 selector 的 HTML (outerHTML),不跳轉
+    若檔案已存在且不強制更新,則直接跳過。
     """
     if os.path.exists(file_path) and not force_update:
-        print(f"{file_path} 已存在，使用已有文件，跳過等待時間。")
+        print(f"{file_path} 已存在,使用已有文件,跳過等待時間。")
         return
     else:
         print(f"等待頁面加載 {delay} 秒...")
@@ -63,7 +63,15 @@ def save_html_nolink(driver, selector, file_path, delay=5):
 
 def download_stock_price(driver, stockID, base_dir, start_date, end_date, interval='1d'):
     """
-    下載股票股價 CSV
+    下載指定股票ID在特定日期範圍內的股價資料,並保存為 CSV 文件。
+    可以指定數據抓取的時間間隔。
+
+    :param driver: Selenium WebDriver 的實例。
+    :param stockID: 股票代碼。
+    :param base_dir: 文件保存的基本目錄。
+    :param start_date: 開始日期。
+    :param end_date: 結束日期。
+    :param interval: 資料的時間間隔(默認為 '1d',即每天)。
     """
     ticker_symbol_1 = f"{stockID}.TW"
     ticker_symbol_2 = f"{stockID}.TWO"
@@ -71,16 +79,16 @@ def download_stock_price(driver, stockID, base_dir, start_date, end_date, interv
     stock_data = None
 
     for ticker_symbol in ticker_symbols:
-        print(f"嘗試下載股價資料，代號：{ticker_symbol}")
+        print(f"嘗試下載股價資料,代號：{ticker_symbol}")
         ticker = yf.Ticker(ticker_symbol)
         stock_data = ticker.history(start=start_date, end=end_date, interval=interval)
         if not stock_data.empty:
             actual_start = stock_data.index[0]
             actual_end = stock_data.index[-1]
-            print(f"成功下載資料，日期範圍：{actual_start} 至 {actual_end}")
+            print(f"成功下載資料,日期範圍：{actual_start} 至 {actual_end}")
             break
         else:
-            print(f"無法下載資料，代號：{ticker_symbol}")
+            print(f"無法下載資料,代號：{ticker_symbol}")
             stock_data = None
 
     if stock_data is None or stock_data.empty:
@@ -93,11 +101,11 @@ def download_stock_price(driver, stockID, base_dir, start_date, end_date, interv
 
 def save_html(driver, url, selector, file_path, delay=5):
     """
-    跳轉網址後，再抓取指定 selector 的 HTML。
-    若檔案已存在且不強制更新，則直接跳過。
+    跳轉網址後,再抓取指定 selector 的 HTML。
+    若檔案已存在且不強制更新,則直接跳過。
     """
     if os.path.exists(file_path) and not force_update:
-        print(f"{file_path} 已存在，使用已有文件，跳過等待時間。")
+        print(f"{file_path} 已存在,使用已有文件,跳過等待時間。")
         return
     else:
         print(f"前往網址: {url}")
@@ -117,7 +125,12 @@ def save_html(driver, url, selector, file_path, delay=5):
 
 def parse_html_with_multi_layer_headers(file_path, output_csv, table_id=None):
     """
-    解析具有多層表頭的 HTML，並轉換為 CSV
+    解析具有多層表頭的 HTML 表格,並將其轉換成 CSV 文件。
+    可以指定表格的 id 進行精確的選擇。
+
+    :param file_path: 要解析的 HTML 文件的路徑。
+    :param output_csv: 輸出 CSV 文件的路徑。
+    :param table_id: HTML 表格的 id 屬性(可選)。
     """
     with open(file_path, 'r', encoding='utf-8') as file:
         soup = BeautifulSoup(file, 'html.parser')
@@ -199,7 +212,7 @@ def parse_html_with_multi_layer_headers(file_path, output_csv, table_id=None):
 
 def parse_equity_distribution(file_path, output_csv, table_id='tblDetail'):
     """
-    解析股數分級 HTML（多層表頭），轉為 CSV
+    解析股數分級 HTML(多層表頭),轉為 CSV
     """
     with open(file_path, 'r', encoding='utf-8') as file:
         html_content = file.read()
@@ -220,34 +233,56 @@ def parse_equity_distribution(file_path, output_csv, table_id='tblDetail'):
     print(f"成功將 {file_path} 轉換為 {output_csv}")
 
 def generate_quarter_list(start_year, start_quarter, end_year, end_quarter):
-    """生成需要的季度列表"""
+    """
+    生成從指定的起始季度到結束季度的列表。
+    :param start_year: 起始年份。
+    :param start_quarter: 起始季度。
+    :param end_year: 結束年份。
+    :param end_quarter: 結束季度。
+    :return: 包含季度標識的列表,如 ['2020Q1', '2019Q4', ...]。
+    """
     quarters = []
     year, quarter = start_year, start_quarter
     while (year > end_year) or (year == end_year and quarter >= end_quarter):
-        quarters.append(f"{year}Q{quarter}")
-        quarter -= 1
-        if quarter == 0:
+        quarters.append(f"{year}Q{quarter}")  # 將每個季度以 '年Q季' 的格式加入列表
+        quarter -= 1  # 減少季度數
+        if quarter == 0:  # 如果季度數減到0,則年份減一,季度變為4
             quarter = 4
             year -= 1
     return quarters
 
 def calculate_qry_times(needed_quarters, quarters_per_page):
-    """計算需要的 QRY_TIME 值"""
+    """
+    根據季度列表計算所需的 QRY_TIME 列表,用於分批次查詢數據。
+
+    :param needed_quarters: 需要查詢的季度列表,如 ['2020Q1', '2019Q4', ...]。
+    :param quarters_per_page: 每個查詢能包含的最大季度數。
+    :return: 每個批次查詢所需的 QRY_TIME 列表。
+    """
     qry_times = []
     index = 0
     total_quarters = len(needed_quarters)
     while index < total_quarters:
-        quarter_str = needed_quarters[index]
-        year = quarter_str[:4]
-        quarter = quarter_str[-1]
-        qry_time = f"{year}{quarter}"
+        quarter_str = needed_quarters[index]  # 從列表中獲取當前季度
+        year = quarter_str[:4]  # 季度字符串的前4位是年份
+        quarter = quarter_str[-1]  # 季度字符串的最後一位是季度數
+        qry_time = f"{year}{quarter}"  # 形成 QRY_TIME 格式,例如 '20201' for 2020年第一季度
         qry_times.append(qry_time)
-        index += quarters_per_page
+        index += quarters_per_page  # 增加索引以跳過已經處理的季度
     return qry_times
 
 def scrape_financial_data(driver, report_type, start_year, start_quarter, end_year, end_quarter, stockID, base_dir):
     """
-    抓取財務報表 (BS/IS/CF)
+    抓取指定股票ID和時間範圍內的財務報表數據。
+
+    :param driver: Selenium WebDriver 的實例。
+    :param report_type: 要抓取的報表類型 ('BS' for Balance Sheet, 'IS' for Income Statement, 'CF' for Cash Flow)。
+    :param start_year: 抓取起始年份。
+    :param start_quarter: 抓取起始季度。
+    :param end_year: 抓取結束年份。
+    :param end_quarter: 抓取結束季度。
+    :param stockID: 股票代碼。
+    :param base_dir: 文件存儲的基本路徑。
     """
     if report_type == 'BS':
         RPT_CAT = 'BS_M_QUAR'
@@ -267,7 +302,7 @@ def scrape_financial_data(driver, report_type, start_year, start_quarter, end_ye
 
     file_path = os.path.join(base_dir, file_name)
     if os.path.exists(file_path) and not force_update:
-        print(f"{file_path} 已存在，使用已有文件。")
+        print(f"{file_path} 已存在,使用已有文件。")
         return
 
     needed_quarters = generate_quarter_list(start_year, start_quarter, end_year, end_quarter)
@@ -276,6 +311,7 @@ def scrape_financial_data(driver, report_type, start_year, start_quarter, end_ye
     data_list = []
     collected_quarters = set()
 
+    # 遍歷每個 QRY_TIME 並抓取相關數據
     for qry_time in qry_times:
         url = f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT={RPT_CAT}&STOCK_ID={stockID}&QRY_TIME={qry_time}"
         print(f"正在訪問網址：{url}")
@@ -288,6 +324,7 @@ def scrape_financial_data(driver, report_type, start_year, start_quarter, end_ye
             print(f"錯誤：未能加載表格 - {e}")
             continue
 
+        # 解析頁面上的表格
         table_element = driver.find_element(By.ID, 'tblFinDetail')
         table_html = table_element.get_attribute('outerHTML')
 
@@ -296,8 +333,9 @@ def scrape_financial_data(driver, report_type, start_year, start_quarter, end_ye
 
         df.columns = ['_'.join(col).strip() if col[1] else col[0].strip() for col in df.columns.values]
 
+        # 確定該頁面包含哪些季度的數據並進行收集
         page_quarters = []
-        for col in df.columns[1:]:
+        for col in df.columns[1:]:  # 避開第一列(項目名稱)
             quarter = col.split('_')[0]
             if quarter not in page_quarters:
                 page_quarters.append(quarter)
@@ -329,6 +367,7 @@ def scrape_financial_data(driver, report_type, start_year, start_quarter, end_ye
         print("未獲取到任何數據。")
         return
 
+    # 將收集的數據整理為 DataFrame 並保存為 CSV 文件
     result_df = pd.DataFrame(data_list)
     if '百分比' in result_df.columns:
         pivot_df = result_df.pivot_table(index='項目', columns='季度', values=['金額', '百分比'], aggfunc='first')
