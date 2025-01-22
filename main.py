@@ -2,6 +2,7 @@
 import streamlit as st
 
 def main():
+    
     st.set_page_config(
         page_title="我的多頁版投資分析平台",
         layout="wide",

@@ -8,43 +8,54 @@ import os
 from datetime import datetime
 import yfinance as yf
 
+
 # 專案內部模組
 from config import work_dir, DL_dir
 from investment_indicators import (
-    calc_metrics_for_range,
     calc_multiple_period_metrics,
-    calculate_alpha_beta
+    get_risk_free_rate
 )
 from financial_statements_fetcher import (
     fetch_all_data,
     close_driver
 )
-from DL_Y import download_stock_price  # 假設您有此檔案專門只下載股價
+from DL_Y import download_stock_price
 
-st.set_page_config(
-    page_title="個股基本資訊與多股票比較",
-    layout="wide",
-)
+today_date = pd.to_datetime(datetime.today().date())
+
+st.set_page_config(page_title="個股基本資訊與多股票比較", layout="wide")
 
 def page_basic_info():
     st.title("個股基本資訊與多股票比較")
 
     # 區塊1: 下載參數
     with st.expander("1) 資料下載參數", expanded=True):
-        colA, colB, colC = st.columns(3)
+        colA, colB, colC, colD = st.columns([1,1,2,2])
         with colA:
-            stock_id = st.text_input("主要股票代號 (會完整抓取 Goodinfo + 三大財報)", value="2412")
+            stock_id = st.text_input("主要股票(抓取Goodinfo數據)", value="2412")
         with colB:
-            market_id = st.text_input("市場基準代號 (計算Alpha/Beta用)", value="^TWII")
+            market_id = st.text_input("市場基準(計算用)", value="^TWII")
         with colC:
-            other_ids_input = st.text_input("其他比較股票代號 (逗號分隔)", value="2330,00713,006208")
-
-        colD, colE = st.columns(2)
+            other_ids_input = st.text_input("比較股票(逗號分隔)", value="2330,00713,006208")
         with colD:
-            start_date = st.date_input("股價開始日期", pd.to_datetime("2000-01-01"))
-            end_date   = st.date_input("股價結束日期", pd.to_datetime("2025-01-01"))
+            # 使用 columns 排列處理進度文字和動態更新
+            progress_col1, progress_col2 = st.columns([1, 3])
+            with progress_col1:
+                st.text("處理進度")  # 固定標題
+            with progress_col2:
+                progress_placeholder = st.empty()  # 動態更新的處理進度文字
+
+            # 進度條放在下方
+            progress_bar = st.progress(0)
+
+        colE, colF, colG, colH = st.columns(4)
         with colE:
+            start_date = st.date_input("股價開始日期", pd.to_datetime("2000-01-01"))
+        with colF:
+            end_date   = st.date_input("股價結束日期", today_date)
+        with colG:
             start_yq = st.text_input("財報起始季度(YYYY-Q)", value="2000-1")
+        with colH:
             end_yq   = st.text_input("財報結束季度(YYYY-Q)", value="2024-4")
 
         # 解析
@@ -56,9 +67,14 @@ def page_basic_info():
             return
 
         # 按鈕: 下載
-        if st.button("下載或更新資料 (Goodinfo + 股價)"):
-            st.write("開始下載...請稍候")
-            # 主要股票:
+        if st.button("下載或更新資料"):
+            all_stocks = [stock_id] + [market_id.strip()] + [x.strip() for x in other_ids_input.split(",") if x.strip()]
+            total_tasks = len(all_stocks)
+
+            for i, sid in enumerate(all_stocks):
+                status = f"正在處理 {sid} ({i + 1}/{total_tasks})"
+                progress_placeholder.text(status)  # 動態更新處理狀態
+                progress_bar.progress((i + 1) / total_tasks)
             main_dir = os.path.join(DL_dir, stock_id)
             os.makedirs(main_dir, exist_ok=True)
             fetch_all_data(
@@ -94,215 +110,147 @@ def page_basic_info():
                     start_date=str(start_date),
                     end_date=str(end_date)
                 )
+            progress_placeholder.text("所有資料已處理完成！")
+            progress_bar.progress(1.0)
 
-            st.success("下載完畢！")
 
 
-    # 區塊2: 指標與比較
-    with st.expander("2) 多股票指標比較", expanded=True):
+    with st.expander("2) 多股票指標比較(Rebase圖)", expanded=True):
         col1, col2 = st.columns(2)
         with col1:
-            analysis_start_date = st.date_input("分析起始日期", pd.to_datetime("2010-01-01"))
+            analysis_start_date = st.date_input("分析起始日", pd.to_datetime("2010-01-01"))
         with col2:
-            analysis_end_date   = st.date_input("分析結束日期", pd.to_datetime("2025-01-01"))
+            analysis_end_date = st.date_input("分析結束日", today_date)
 
-        rebase_data = {}
-        metrics_data = []
-        cumulative_df = pd.DataFrame()
-
-        # 多檔股票 = [主要股票] + [市場基準(可選)] + [其他股票]
-        all_stocks = [stock_id]  # main
+        all_stocks = [stock_id]
         if market_id.strip():
             all_stocks.append(market_id.strip())
-        other_ids = [x.strip() for x in other_ids_input.split(",") if x.strip()]
-        all_stocks.extend(other_ids)
+        others = [x.strip() for x in other_ids_input.split(",") if x.strip()]
+        all_stocks.extend(others)
 
+        cum_df = pd.DataFrame()
         for sid in all_stocks:
-            price_file = os.path.join(DL_dir, sid, f"{sid}_price.csv")
-            if not os.path.exists(price_file):
-                st.warning(f"{sid}_price.csv 不存在, 請先下載")
+            csvf = os.path.join(DL_dir, sid, f"{sid}_price.csv")
+            if not os.path.exists(csvf):
+                st.warning(f"{sid}_price.csv 不存在，請先下載")
                 continue
             try:
-                df_price = pd.read_csv(price_file, parse_dates=["Date"], index_col="Date")
-                df_price.index = df_price.index.tz_localize(None)
-                # 篩選分析區間
-                df_sub = df_price.loc[analysis_start_date:analysis_end_date].copy()
-                if df_sub.empty:
-                    st.warning(f"{sid} 在分析期間無交易資料，跳過")
+                dfp = pd.read_csv(csvf, parse_dates=["Date"], index_col="Date")
+                dfp.index = dfp.index.tz_localize(None)
+                subp = dfp.loc[analysis_start_date:analysis_end_date].copy()
+                if subp.empty:
+                    st.warning(f"{sid} 在此區間無資料")
                     continue
-
-                # Rebase：若該股票的第一筆日期 > analysis_start_date，就從那天開始 = 1
-                first_idx = df_sub.index[0]
-                df_sub["pct"] = df_sub["Close"].pct_change().fillna(0)
-                # 累積報酬：從「該檔實際開始日」當天Close當作 1
-                # 先計算 factor = 1 + daily_ret 累乘
-                cum = (1 + df_sub["pct"]).cumprod()
-                # 讓第一天 = 1
-                # (若您想讓 "analysis_start_date" 當天=1，即使股票沒上市，也可以再行調整)
-                base_price = cum.iloc[0]
-                df_sub["cumulative_return"] = cum / base_price
-
-
-                # 累積報酬存至 cumulative_df
-                # 以 df_sub.index 做 join
-                cumulative_df[sid] = df_sub["cumulative_return"]
-
+                subp["pct"] = subp["Close"].pct_change().fillna(0)
+                cprod = (1 + subp["pct"]).cumprod()
+                basev = cprod.iloc[0]
+                subp["rebase"] = cprod / basev
+                cum_df[sid] = subp["rebase"]
             except Exception as e:
-                st.error(f"讀取/處理 {sid} 時出錯: {e}")
+                st.error(f"處理 {sid} 發生錯誤: {e}")
 
-        # 畫累積報酬
-        if not cumulative_df.empty:
-            st.subheader("累積報酬 (Rebase) 比較圖")
-            fig = px.line(
-                cumulative_df,
-                x=cumulative_df.index,
-                y=cumulative_df.columns,
-                labels={"value": "累積報酬", "variable": "股票"},
-                title="多股票累積報酬比較 (Rebase)"
-            )
-            fig.update_xaxes(autorange=True)
-            fig.update_yaxes(rangemode="tozero")  # 讓y從0開始
+        if not cum_df.empty:
+            fig = px.line(cum_df, x=cum_df.index, y=cum_df.columns,
+                          title="多股票累積報酬(Rebase)比較",
+                          labels={"value": "累積報酬","variable": "股票"})
+            fig.update_layout(legend=dict(orientation="h"))
             st.plotly_chart(fig, use_container_width=True)
 
-
-    # 區塊3: 多期(3/5/10/15/20年) 指標
-    with st.expander("3) 多期指標 (3/5/10/15/20年)", expanded=False):
-        st.write("此處以所選日期區間的 `end_date` 作為當前時點 (若該檔股票資料無法涵蓋則顯示 NaN)。")
-        # 使用 analysis_end_date 作為基準點
+    with st.expander("3) 多期(3/5/10/15/20年) 指標", expanded=False):
         as_of_dt = pd.Timestamp(analysis_end_date)
-        # 在第3區塊內新增無風險收益率計算
-        tnx_path = os.path.join(DL_dir, "^TNX", "^TNX_price.csv")
-        daily_rf_return = 0.0
-        if os.path.exists(tnx_path):
-            df_tnx = pd.read_csv(tnx_path, parse_dates=["Date"], index_col="Date")
-
-            yearly_yield = df_tnx["Close"].mean() / 100.0  # 假設Close是年化殖利率 (%)
-            daily_rf_return = yearly_yield / 252  # 簡單估算日收益率
-        else:
-            st.warning("無法找到 ^TNX_price.csv，無風險利率暫設為0.0")
-
-
-        multi_period_data = []
-        for sid in all_stocks:
-            price_file = os.path.join(DL_dir, sid, f"{sid}_price.csv")
-            if not os.path.exists(price_file):
-                continue
+        tnxf = os.path.join(DL_dir, "^TNX", "^TNX_price.csv")
+        daily_rf = 0.0
+        yearly_rf  = 0.01
+        if os.path.exists(tnxf):
             try:
-                df_price = pd.read_csv(price_file, parse_dates=["Date"], index_col="Date")
-                df_price.index = df_price.index.tz_localize(None)
-                # 篩選只包含 end_date 之前的數據
-                sub_df = df_price.loc[:as_of_dt]
-                if sub_df.empty:
-                    continue
+                dftnx = pd.read_csv(tnxf, parse_dates=["Date"], index_col="Date")
+                dftnx.index = dftnx.index.tz_localize(None)
+                daily_rf, yearly_rf = get_risk_free_rate(dftnx.loc[:as_of_dt])
+            except:
+                st.warning("解析 ^TNX_price.csv 失敗, rf=0")
 
-                # 市場數據
-                market_path = os.path.join(DL_dir, market_id, f"{market_id}_price.csv")
-                if not os.path.exists(market_path):
-                    st.warning(f"找不到市場指數檔 {market_path}")
-                    market_df = pd.DataFrame()
-                else:
-                    market_df = pd.read_csv(market_path, parse_dates=["Date"], index_col="Date")
-                    market_df.index = market_df.index.tz_localize(None)
-                                # 計算多期指標
-                df_multi = calc_multiple_period_metrics(
-                    stock_df=sub_df,
-                    as_of_date=as_of_dt,
-                    years_list=[3, 5, 10, 15, 20],
-                    market_df=market_df,
-                    daily_rf_return=daily_rf_return
-                )
+        use_price_type = st.radio("計算使用", ["Close","Adj Close"], index=0)
 
-                alpha_val, beta_val = (np.nan, np.nan)
-                if market_id.strip() and sid != market_id.strip():
-                    market_path = os.path.join(DL_dir, market_id.strip(), f"{market_id.strip()}_price.csv")
-                    if os.path.exists(market_path):
-                        df_m = pd.read_csv(market_path, parse_dates=["Date"], index_col="Date")
-                        df_m.index = df_m.index.tz_localize(None)
-                        df_m = df_m.loc[sub_df.index.min():sub_df.index.max()]
-                        def get_risk_free_rate(start_date: str, end_date: str, base_dir: str = DL_dir) -> float:
-                            """
-                            獲取 ^TNX 無風險利率的平均日收益率。
-                            """
-                            free_rate = "^TNX"
-                            free_rate_dir = os.path.join(base_dir, free_rate)
-                            os.makedirs(free_rate_dir, exist_ok=True)
-                            free_rate_file = os.path.join(free_rate_dir, f"{free_rate}_price.csv")
-                            print(f"嘗試獲取無風險利率數據，路徑：{free_rate_file}")
+        all_syms = [stock_id]
+        if market_id.strip():
+            all_syms.append(market_id.strip())
+        all_syms.extend(others)
 
-                            # 檢查是否已有下載數據
-                            if not os.path.exists(free_rate_file):
-                                download_stock_price(
-                                    stockID=free_rate,
-                                    base_dir=free_rate_dir,
-                                    start_date=start_date,
-                                    end_date=end_date
-                                )
+        market_df = pd.DataFrame()
+        if market_id.strip():
+            mkt_csv = os.path.join(DL_dir, market_id.strip(), f"{market_id.strip()}_price.csv")
+            if os.path.exists(mkt_csv):
+                mdf = pd.read_csv(mkt_csv, parse_dates=["Date"], index_col="Date")
+                mdf.index = mdf.index.tz_localize(None)
+                market_df = mdf
 
-                            try:
-                                df_free = pd.read_csv(free_rate_file, parse_dates=["Date"], index_col="Date")
-                                df_free = df_free.loc[start_date:end_date]
-                                print(df_free)
-                                df_free["daily_return"] = df_free["Close"].pct_change().fillna(0)
-                                return df_free["daily_return"].mean()
-                            except Exception as e:
-                                print(f"無法獲取 ^TNX 數據，使用默認值。錯誤：{e}")
-                                return 0.0  # 默認無風險利率
-                        risk_free_rate = get_risk_free_rate(
-                            start_date=str(start_date),
-                            end_date=str(end_date)
-                        )
+        from investment_indicators import calc_multiple_period_metrics
+        multi_data = []
+        for sid in all_syms:
+            cf = os.path.join(DL_dir, sid, f"{sid}_price.csv")
+            if not os.path.exists(cf):
+                continue
+            dfp = pd.read_csv(cf, parse_dates=["Date"], index_col="Date")
+            dfp.index = dfp.index.tz_localize(None)
+            subp = dfp.loc[:as_of_dt]
+            if subp.empty:
+                continue
 
-                        alpha_val, beta_val = calculate_alpha_beta(
-                            stock_prices=sub_df['Close'],
-                            market_prices=df_m['Close'],
-                            daily_rf_return=risk_free_rate
-                        )
-
-                df_multi["股票"] = sid
-                df_multi["Alpha"] = alpha_val
-                df_multi["Beta"] = beta_val
-                multi_period_data.append(df_multi)
-            except Exception as e:
-                st.error(f"處理 {sid} 時發生錯誤: {e}")
-
-        if multi_period_data:
-            # 合併所有數據
-            df_combined = pd.concat(multi_period_data, ignore_index=True)
-            df_pivot = df_combined.pivot(index="股票", columns="Years", values=["MDD", "Sharpe", "AnnualReturn", "DCA_IRR", "Alpha", "Beta"])
-            # 重設多層列名，第一層為年份，第二層為指標
-            df_pivot.columns.names = ["指標", "年份"]
-            metric_name_map = {
-                "MDD": "最大回撤",
-                "Sharpe": "夏普值",
-                "AnnualReturn": "年平均報酬",
-                "DCA_IRR": "定期定額IRR",
-                "Alpha": "Alpha",
-                "Beta": "Beta",
-            }
-            df_pivot.rename(columns=metric_name_map, inplace=True)
-            # 顯示表格
-            def format_rule(metric, year):
-                
-                if metric == "最大回撤":
-                    return "{:.0%}"
-                elif metric in ["年平均報酬", "定期定額IRR"]:
-                    return "{:.1%}"
-                elif metric in ["夏普值", "Alpha", "Beta"]:
-                    return "{:.2f}"
-                else:
-                    return "{:.1%}"  # 預設百分比格式
-
-            st.dataframe(
-                df_pivot.style.format({
-                    (year, metric): format_rule(year, metric)
-                    for year, metric in df_pivot.columns
-                })
+            df_metrics = calc_multiple_period_metrics(
+                stock_df=subp,
+                as_of_date=as_of_dt,
+                years_list=[3,5,10,15,20],
+                market_df=market_df,
+                daily_rf_return=daily_rf,
+                use_adj_close=(use_price_type=="Adj Close"),
+                freq_for_reg="W",       # 月度回歸
+                rf_annual_rate=yearly_rf 
             )
-            
-        else:
-            st.info("無可顯示之多期指標。")
+            df_metrics["股票"] = sid
+            multi_data.append(df_metrics)
+
+        if not multi_data:
+            st.info("無可顯示之多期指標")
+            return
+
+        # 合併
+        merged_df = pd.concat(multi_data, ignore_index=True)
+        # pivot:  index="股票", columns="Years"
+        pivoted = merged_df.pivot(index="股票", columns="Years")
+        # pivoted 將有多層欄位: ( 指標 , 年 ) 
+        # st.write(pivoted)  # Debug
+
+        # === 表1
+        st.subheader("回報及風險表現")
+        st.markdown("**Sharpe**：衡量每單位風險帶來的回報，數值越高代表回報效率越高", help="適合挑選夏普比率高的資產，因為這些資產能穩定獲利，值得投資")
+        st.markdown("**Sortino**：專注於下行風險，僅考量虧損風險而忽略收益，數值越高代表虧損風險越小", help="適合降低虧損風險，挑選Sortino比率高的資產更能控制風險")
+        st.markdown("**Alpha**：評估投資是否跑贏市場基準，正值表示超額回報", help="強調超額回報，但不考慮風險或波動")
+        st.markdown("**Beta**：衡量資產的波動性與市場的聯動性數值=1時與市場同步，>1時波動性更高，<1時則更穩定", help="用來判斷資產相對於市場的波動程度")
 
 
+
+        try:
+            df_sh = pivoted[["Sharpe","Sortino","Alpha","Beta"]]
+            # df_sh 會是一個 2-level columns: top=[Sharpe, Sortino], sub=3,5,10,15,20
+            st.dataframe(df_sh.style.format("{:.2f}"))
+        except KeyError:
+            st.write("無資料")
+
+
+        # === 表2
+        st.subheader("資產表現")
+        st.markdown("**最大回撤**：歷史上資產的最大虧損幅度，數值越大風險越高", help="選擇最大回撤小的資產，可以減輕虧損時的心理壓力")
+        st.markdown("**年化波動率**：衡量資產價格的波動幅度，數值越高代表波動越大，風險越高", help="波動率低的資產更適合追求穩定回報的投資者")
+        st.markdown("**定期定額年化報酬**：模擬每月固定金額投資的年化收益率，數值越高越有吸引力", help="可用於判斷資產是否適合採用定期定額的投資方式")
+        st.markdown("**年平均報酬**：每年的平均收益率，最直觀的衡量回報表現的標準", help="年平均報酬越高，資產的投資吸引力越強")
+        try:
+            df_mvol = pivoted[["MDD","AnnualVol","DCA_IRR","AnnualReturn"]]
+            # MDD,AnnualVol 都是 0.xx => 轉百分比
+            st.dataframe(
+                df_mvol.style.format("{:.1%}")
+            )
+        except KeyError:
+            st.write("無資料")
 
 
 def main():

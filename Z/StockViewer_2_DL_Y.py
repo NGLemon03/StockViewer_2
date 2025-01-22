@@ -71,7 +71,7 @@ def calculate_adjusted_close(df: pd.DataFrame) -> pd.DataFrame:
         df['Adjusted Close'] = df.get('Close', pd.Series(index=df.index, dtype='float'))
         return df
 
-    df['Adjusted Close'] = (df['Close'] - df['Dividends']) / (1 + df['Stock Splits'] / 10)
+    df['Adj Close'] = (df['Close'] - df['Dividends']) / (1 + df['Stock Splits'] / 10)
     return df
 
 def download_stock_price(stockID, base_dir, start_date, end_date, interval='1d'):

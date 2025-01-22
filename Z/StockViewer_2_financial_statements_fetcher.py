@@ -215,7 +215,7 @@ def download_stock_price(driver, stockID, base_dir, start_date, end_date, interv
             return df
 
         # 根據公式計算昨收價（新）
-        df['Adjusted Close'] = (df['Close'] - df['Dividends']) / (1 + df['Stock Splits'] / 10)
+        df['Adj Close'] = (df['Close'] - df['Dividends']) / (1 + df['Stock Splits'] / 10)
         return df
 
     stock_data = calculate_adjusted_close(stock_data)
