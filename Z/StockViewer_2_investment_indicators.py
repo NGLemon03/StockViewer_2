@@ -263,10 +263,10 @@ def calc_multiple_period_metrics(
 
                 row = {
                   "Years": y,
-                  "MDD": mdd, "AnnualVol": vol,
+                  "MDD": mdd*100, "AnnualVol": vol*100,
                   "Sharpe": shp, "Sortino": srt,
-                  "AnnualReturn": ann_ret,
-                  "DCA_IRR": irr,
+                  "AnnualReturn": ann_ret*100,
+                  "DCA_IRR": irr*100,
                   "Alpha": alpha_val*100, 
                   "Beta": beta_val
                 }

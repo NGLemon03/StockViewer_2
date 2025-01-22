@@ -1254,10 +1254,10 @@ def calc_multiple_period_metrics(
 
                 row = {
                   "Years": y,
-                  "MDD": mdd, "AnnualVol": vol,
+                  "MDD": mdd*100, "AnnualVol": vol*100,
                   "Sharpe": shp, "Sortino": srt,
-                  "AnnualReturn": ann_ret,
-                  "DCA_IRR": irr,
+                  "AnnualReturn": ann_ret*100,
+                  "DCA_IRR": irr*100,
                   "Alpha": alpha_val*100, 
                   "Beta": beta_val
                 }
@@ -1271,6 +1271,7 @@ def calc_multiple_period_metrics(
 import streamlit as st
 
 def main():
+    
     st.set_page_config(
         page_title="我的多頁版投資分析平台",
         layout="wide",
@@ -1294,6 +1295,7 @@ import streamlit as st
 
 # ====== 主程式 ======
 def streamlit_app():
+    
     st.title("整合式多分頁介面")
     st.sidebar.title("功能導覽")
     page = st.sidebar.radio("選擇分頁", [
@@ -1530,7 +1532,7 @@ def page_basic_info():
         # st.write(pivoted)  # Debug
 
         # === 表1
-        st.subheader("回報及風險表現")
+        st.markdown("回報及風險表現")
         st.markdown("**Sharpe**：衡量每單位風險帶來的回報，數值越高代表回報效率越高", help="適合挑選夏普比率高的資產，因為這些資產能穩定獲利，值得投資")
         st.markdown("**Sortino**：專注於下行風險，僅考量虧損風險而忽略收益，數值越高代表虧損風險越小", help="適合降低虧損風險，挑選Sortino比率高的資產更能控制風險")
         st.markdown("**Alpha**：評估投資是否跑贏市場基準，正值表示超額回報", help="強調超額回報，但不考慮風險或波動")
@@ -1539,25 +1541,69 @@ def page_basic_info():
 
 
         try:
-            df_sh = pivoted[["Sharpe","Sortino","Alpha","Beta"]]
+            df_sh = pivoted[["Sharpe","Sortino","Alpha","Beta"]].copy()
             # df_sh 會是一個 2-level columns: top=[Sharpe, Sortino], sub=3,5,10,15,20
-            st.dataframe(df_sh.style.format("{:.2f}"))
+            df_sh.index.name = None
+            # 多層欄位通常預設 columns.names = ['指標','Years'] 或 [None,'Years']，改成全部 None
+            df_sh.columns.names = [None, None]
+            rename_dict = {
+                "Sharpe": "Sharpe",
+                "Sortino": "Sortino",
+                "Alpha": "Alpha(%)",
+                "Beta": "Beta"
+            }
+            df_sh.rename(columns=rename_dict, level=0, inplace=True)   
+
+            # MDD,AnnualVol 都是 0.xx => 轉百分比
+
+            # 將 (Sharpe,3) => Sharpe_3, (Sortino,5) => Sortino_5, ...
+            format_dict = {
+                col: "{:.1f}" if col[0] == "Alpha(%)" else "{:.2f}"
+                for col in df_sh.columns
+            }
+
+            html_table = (
+                df_sh.style
+                    .set_properties(**{'text-align': 'center'})
+                    .format(format_dict)
+                    .to_html()
+            )
+            st.markdown(f"<div style='text-align:center;'>{html_table}</div>", unsafe_allow_html=True)
         except KeyError:
             st.write("無資料")
 
 
         # === 表2
-        st.subheader("資產表現")
+        st.markdown("資產表現")
         st.markdown("**最大回撤**：歷史上資產的最大虧損幅度，數值越大風險越高", help="選擇最大回撤小的資產，可以減輕虧損時的心理壓力")
         st.markdown("**年化波動率**：衡量資產價格的波動幅度，數值越高代表波動越大，風險越高", help="波動率低的資產更適合追求穩定回報的投資者")
         st.markdown("**定期定額年化報酬**：模擬每月固定金額投資的年化收益率，數值越高越有吸引力", help="可用於判斷資產是否適合採用定期定額的投資方式")
         st.markdown("**年平均報酬**：每年的平均收益率，最直觀的衡量回報表現的標準", help="年平均報酬越高，資產的投資吸引力越強")
         try:
-            df_mvol = pivoted[["MDD","AnnualVol","DCA_IRR","AnnualReturn"]]
+            df_mvol = pivoted[["MDD","AnnualVol","DCA_IRR","AnnualReturn"]].copy()
+            # 移除索引、欄位層級的名字 (比方說 pivoted 後會自動有 columns.name="Years")
+            df_mvol.index.name = None
+            # 多層欄位通常預設 columns.names = ['指標','Years'] 或 [None,'Years']，改成全部 None
+            df_mvol.columns.names = [None, None]
+            rename_dict = {
+                "MDD":        "最大回撤(%)",
+                "AnnualVol":  "年化波動率(%)",
+                "DCA_IRR":    "定期定額年化報酬(%)",
+                "AnnualReturn":"年平均報酬(%)"
+            }
+            df_mvol.rename(columns=rename_dict, level=0, inplace=True)   
+
             # MDD,AnnualVol 都是 0.xx => 轉百分比
-            st.dataframe(
-                df_mvol.style.format("{:.1%}")
+
+            # 將 (Sharpe,3) => Sharpe_3, (Sortino,5) => Sortino_5, ...
+
+            html_table = (
+                df_mvol.style
+                    .set_properties(**{'text-align': 'center'})
+                    .format("{:.1f}")
+                    .to_html()
             )
+            st.markdown(f"<div style='text-align:center;'>{html_table}</div>", unsafe_allow_html=True)
         except KeyError:
             st.write("無資料")
 

@@ -1,0 +1,104 @@
+目錄結構: ./
+
+|- .history
+  |- oldver
+    |- oldver_20250118090450.py
+    |- oldver_20250118090813.py
+    |- oldver_20250118090956.py
+    |- oldver_20250118091129.py
+|- bear_market_analysis.py
+|- config.py
+|- dir.py
+|- directory_structure.txt
+|- DL
+  |- 0050
+    |- 0050_price.csv
+  |- 006208
+    |- 006208_price.csv
+  |- 00631L
+    |- 00631L_price.csv
+  |- 00713
+    |- 00713_price.csv
+  |- 2330
+    |- 2330_price.csv
+  |- 2412
+    |- 2412_price.csv
+    |- CashFlow.csv
+    |- CashFlow.html
+    |- Dividend.csv
+    |- Dividend.html
+    |- EPS_Quar.csv
+    |- EPS_Quar.html
+    |- EPS_Year.csv
+    |- EPS_Year.html
+    |- EquityDistribution.csv
+    |- EquityDistribution.html
+    |- MonthlyRevenue.csv
+    |- MonthlyRevenue.html
+    |- PER_PBR.csv
+    |- PER_PBR.html
+  |- 2801
+    |- 2801_price.csv
+  |- 2820
+    |- 2820_price.csv
+  |- 2880
+    |- 2880_price.csv
+  |- 5876
+    |- 5876_price.csv
+  |- NVDA
+    |- NVDA_price.csv
+  |- SPY
+    |- SPY_price.csv
+  |- ^TWII
+    |- ^TWII_price.csv
+|- DL_Y.py
+|- fetch_stock_list.py
+|- financial_statements_fetcher.py
+|- integr.py
+|- investment_indicators.py
+|- list
+  |- emerging.csv
+  |- OTC.csv
+  |- TWSE.csv
+|- main.py
+|- output
+  |- heatmaps
+|- pages
+  |- 1_個股基本資訊.py
+  |- 2_財報.py
+  |- 3_回測.py
+  |- 4_比較.py
+  |- 5_空頭.py
+|- stock
+  |- 00713.TW.csv
+  |- 2303.TW.csv
+  |- 2330.TW.csv
+  |- 2412.TW.csv
+  |- ^IRX.csv
+|- stock_data_processing.py
+|- streamlit_app.py
+|- Z
+  |- @Integr.py
+  |- StockViewer_2_1_個股基本資訊.py
+  |- StockViewer_2_2_財報.py
+  |- StockViewer_2_3_回測.py
+  |- StockViewer_2_4_比較.py
+  |- StockViewer_2_5_空頭.py
+  |- StockViewer_2_bear_market_analysis.py
+  |- StockViewer_2_config.py
+  |- StockViewer_2_DL_Y.py
+  |- StockViewer_2_fetch_stock_list.py
+  |- StockViewer_2_financial_statements_fetcher.py
+  |- StockViewer_2_investment_indicators.py
+  |- StockViewer_2_main.py
+  |- StockViewer_2_stock_data_processing.py
+  |- StockViewer_2_streamlit_app.py
+|- __pycache__
+  |- bear_market_analysis.cpython-312.pyc
+  |- config.cpython-312.pyc
+  |- DL_Y.cpython-312.pyc
+  |- fetch_stock_list.cpython-312.pyc
+  |- financial_statements_fetcher.cpython-312.pyc
+  |- investment_indicators.cpython-312.pyc
+  |- stock_data_processing.cpython-312.pyc
+  |- streamlit_app.cpython-312.pyc
