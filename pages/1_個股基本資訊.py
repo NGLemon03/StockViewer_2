@@ -10,16 +10,16 @@ import yfinance as yf
 
 
 # 專案內部模組
-from config import work_dir, DL_dir
-from investment_indicators import (
+from modlus.config import work_dir, DL_dir
+from modlus.investment_indicators import (
     calc_multiple_period_metrics,
     get_risk_free_rate
 )
-from financial_statements_fetcher import (
+from modlus.financial_statements_fetcher import (
     fetch_all_data,
     close_driver
 )
-from DL_Y import download_stock_price
+from modlus.DL_Y import download_stock_price
 
 today_date = pd.to_datetime(datetime.today().date())
 
@@ -184,7 +184,7 @@ def page_basic_info():
                 mdf.index = mdf.index.tz_localize(None)
                 market_df = mdf
 
-        from investment_indicators import calc_multiple_period_metrics
+        from StockViewer_2.modlus.investment_indicators import calc_multiple_period_metrics
         multi_data = []
         for sid in all_syms:
             cf = os.path.join(DL_dir, sid, f"{sid}_price.csv")

@@ -6,9 +6,10 @@
     |- oldver_20250118090813.py
     |- oldver_20250118090956.py
     |- oldver_20250118091129.py
-|- bear_market_analysis.py
-|- config.py
-|- dir.py
+|- app.log
+|- assets
+  |- style.css
+|- dash_app.py
 |- directory_structure.txt
 |- DL
   |- 0050
@@ -51,16 +52,32 @@
     |- SPY_price.csv
   |- ^TWII
     |- ^TWII_price.csv
-|- DL_Y.py
-|- fetch_stock_list.py
-|- financial_statements_fetcher.py
-|- integr.py
-|- investment_indicators.py
 |- list
   |- emerging.csv
   |- OTC.csv
   |- TWSE.csv
 |- main.py
+|- modlus
+  |- app.log
+  |- bear_market_analysis.py
+  |- config.py
+  |- DL
+  |- DL_Y.py
+  |- fetch_stock_list.py
+  |- financial_statements_fetcher.py
+  |- investment_indicators.py
+  |- list
+  |- output
+    |- heatmaps
+  |- stock
+  |- stock_data_processing.py
+  |- __pycache__
+    |- bear_market_analysis.cpython-312.pyc
+    |- config.cpython-312.pyc
+    |- DL_Y.cpython-312.pyc
+    |- fetch_stock_list.cpython-312.pyc
+    |- investment_indicators.cpython-312.pyc
+    |- stock_data_processing.cpython-312.pyc
 |- output
   |- heatmaps
 |- pages
@@ -69,13 +86,23 @@
   |- 3_回測.py
   |- 4_比較.py
   |- 5_空頭.py
+  |- page1_basic_info.py
+  |- page2_financial.py
+  |- page3_backtest.py
+  |- page4_compare.py
+  |- page5_bear.py
+  |- __pycache__
+    |- page1_basic_info.cpython-312.pyc
+    |- page2_financial.cpython-312.pyc
+    |- page3_backtest.cpython-312.pyc
+    |- page4_compare.cpython-312.pyc
+    |- page5_bear.cpython-312.pyc
 |- stock
   |- 00713.TW.csv
   |- 2303.TW.csv
   |- 2330.TW.csv
   |- 2412.TW.csv
   |- ^IRX.csv
-|- stock_data_processing.py
 |- streamlit_app.py
 |- Z
   |- @Integr.py
@@ -86,13 +113,22 @@
   |- StockViewer_2_5_空頭.py
   |- StockViewer_2_bear_market_analysis.py
   |- StockViewer_2_config.py
+  |- StockViewer_2_dash_app.py
   |- StockViewer_2_DL_Y.py
   |- StockViewer_2_fetch_stock_list.py
   |- StockViewer_2_financial_statements_fetcher.py
   |- StockViewer_2_investment_indicators.py
   |- StockViewer_2_main.py
+  |- StockViewer_2_page1_basic_info.py
+  |- StockViewer_2_page2_financial.py
+  |- StockViewer_2_page3_backtest.py
+  |- StockViewer_2_page4_compare.py
+  |- StockViewer_2_page5_bear.py
   |- StockViewer_2_stock_data_processing.py
   |- StockViewer_2_streamlit_app.py
+|- ^dir.py
+|- ^export_csv_head.py
+|- ^integr.py
 |- __pycache__
   |- bear_market_analysis.cpython-312.pyc
   |- config.cpython-312.pyc

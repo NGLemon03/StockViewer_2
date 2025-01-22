@@ -14,7 +14,7 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from fetch_stock_list import urls_and_filenames  # {'上市網址': 'TWSE.csv', '上櫃網址': 'OTC.csv', ...}
+from StockViewer_2.modlus.fetch_stock_list import urls_and_filenames  # {'上市網址': 'TWSE.csv', '上櫃網址': 'OTC.csv', ...}
 
 # --------------------------------------------------------------------
 # 以下為原先 good_info.py 的設定，改名為 financial_statements_fetcher.py

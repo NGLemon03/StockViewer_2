@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-from config import stock_dir
-from fetch_stock_list import urls_and_filenames
+from modlus.config import DL_DIR
+from modlus.fetch_stock_list import urls_and_filenames
 
 file_data_cache = {}
 suffix_cache = {}
@@ -50,7 +50,7 @@ def download_data(stock_list):
         # 若是特殊符號開頭(指數)或僅字母(ETF代號?)，直接使用該符號
         if stock.startswith('^') or re.match(r'^[A-Za-z]{3,4}$', stock):
             stock_code = stock
-            csv_path = os.path.join(stock_dir, f"{stock_code}.csv")
+            csv_path = os.path.join(DL_DIR, f"{stock_code}.csv")
             try:
                 if os.path.exists(csv_path):
                     df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
@@ -73,7 +73,7 @@ def download_data(stock_list):
             continue
 
         stock_code = f"{stock}{suffix}"
-        csv_path = os.path.join(stock_dir, f"{stock_code}.csv")
+        csv_path = os.path.join(DL_DIR, f"{stock_code}.csv")
 
         try:
             if os.path.exists(csv_path):

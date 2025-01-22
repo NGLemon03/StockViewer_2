@@ -6,10 +6,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-from fetch_stock_list import get_stock_lists
-from stock_data_processing import download_data
-from investment_indicators import calculate_sharpe
-from investment_indicators import (
+from modlus.fetch_stock_list import get_stock_lists
+from modlus.stock_data_processing import download_data
+from modlus.investment_indicators import calculate_sharpe
+from modlus.investment_indicators import (
     calculate_irr_from_prices,
     calculate_sharpe,
     calculate_max_drawdown,

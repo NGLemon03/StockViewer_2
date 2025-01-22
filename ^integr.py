@@ -11,20 +11,21 @@ ver_name = os.path.basename(work_dir)
 
 # 文件清單
 files_to_process = [
-    "bear_market_analysis.py",
-    "config.py",
-    'DL_Y.py',
-    "fetch_stock_list.py",
-    "financial_statements_fetcher.py",
-    "stock_data_processing.py",
-    "investment_indicators.py",
-    "main.py",
-    "streamlit_app.py",
-    "pages/1_個股基本資訊.py",
-    "pages/2_財報.py",
-    "pages/3_回測.py",
-    "pages/4_比較.py",
-    "pages/5_空頭.py"
+    "modlus/bear_market_analysis.py",
+    "modlus/config.py",
+    "modlus/DL_Y.py",
+    "modlus/fetch_stock_list.py",
+    "modlus/financial_statements_fetcher.py",
+    "modlus/investment_indicators.py",
+    "modlus/stock_data_processing.py",
+    "pages/page1_basic_info.py",
+    "pages/page2_financial.py",
+    "pages/page3_backtest.py",
+    "pages/page4_compare.py",
+    "pages/page5_bear.py",
+    "dash_app.py",
+
+
 ]
 
 # 確認目標資料夾是否存在

@@ -1,0 +1,17 @@
+2025-01-22 20:26:55,694 - INFO - 開始計算多期指標
+2025-01-22 20:26:55,694 - INFO - 分析截止日期: 2025-01-22 00:00:00
+2025-01-22 20:26:55,694 - INFO - 分析股票清單: ['2412', '^TWII', '2330', '00713', '006208']
+2025-01-22 20:26:55,696 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\2412\2412_price.csv
+2025-01-22 20:26:55,697 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\^TWII\^TWII_price.csv
+2025-01-22 20:26:55,697 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\2330\2330_price.csv
+2025-01-22 20:26:55,697 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\00713\00713_price.csv
+2025-01-22 20:26:55,697 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\006208\006208_price.csv
+2025-01-22 20:26:55,698 - WARNING - 無可用數據計算多期指標
+2025-01-22 20:26:57,116 - INFO - 開始繪製累積報酬圖
+2025-01-22 20:26:57,117 - INFO - 分析期間: 2010-01-01 00:00:00 至 2025-01-22 00:00:00
+2025-01-22 20:26:57,118 - INFO - 分析股票清單: ['2412', '^TWII', '2330', '00713', '006208']
+2025-01-22 20:26:57,118 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\2412\2412_price.csv
+2025-01-22 20:26:57,119 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\^TWII\^TWII_price.csv
+2025-01-22 20:26:57,119 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\2330\2330_price.csv
+2025-01-22 20:26:57,119 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\00713\00713_price.csv
+2025-01-22 20:26:57,123 - WARNING - 檔案不存在: C:\Stock_reserach\StockViewer_2\modlus\DL\006208\006208_price.csv

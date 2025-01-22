@@ -4,12 +4,12 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from config import list_dir  # 引用 config.py 中的路徑
+from modlus.config import LIST_DIR  # 引用 config.py 中的路徑
 
 urls_and_filenames = {
-    'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2': os.path.join(list_dir, 'TWSE.csv'),
-    'https://isin.twse.com.tw/isin/C_public.jsp?strMode=4': os.path.join(list_dir, 'OTC.csv'),
-    'https://isin.twse.com.tw/isin/C_public.jsp?strMode=5': os.path.join(list_dir, 'emerging.csv')
+    'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2': os.path.join(LIST_DIR, 'TWSE.csv'),
+    'https://isin.twse.com.tw/isin/C_public.jsp?strMode=4': os.path.join(LIST_DIR, 'OTC.csv'),
+    'https://isin.twse.com.tw/isin/C_public.jsp?strMode=5': os.path.join(LIST_DIR, 'emerging.csv')
 }
 
 def fetch_stock_list(url):

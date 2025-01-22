@@ -3,9 +3,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from fetch_stock_list import get_stock_lists
-from stock_data_processing import download_data
-from investment_indicators import calculate_irr_from_prices
+from modlus.fetch_stock_list import get_stock_lists
+from modlus.stock_data_processing import download_data
+from modlus.investment_indicators import calculate_irr_from_prices
 
 # from investment_indicators import calculate_max_drawdown, ...
 

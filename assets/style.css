@@ -1,0 +1,85 @@
+body {
+    font-family: "Microsoft JhengHei", sans-serif; /* 全域字型 */
+    font-size: 12px; /* 全域字型大小 */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Arial", sans-serif; /* 標題字型 */
+    font-weight: bold; /* 標題加粗 */
+}
+
+
+
+.card-body {
+    font-size: 12px; /* 卡片內容的字型大小 */
+    
+}
+.card-body input {
+    font-size: 12px; /* 調整輸入框內文字的字型大小 */
+    padding: 5px; /* 可選，調整內邊距 */
+    height: auto; /* 確保輸入框自適應文字大小 */
+}
+
+.card-body button {
+    font-size: 12px; /* 調整輸入框內文字的字型大小 */
+    padding: 5px; /* 可選，調整內邊距 */
+    height: auto; /* 確保輸入框自適應文字大小 */
+}
+
+#toggle-collapse-button {
+    font-size: 12px; /* 調整按鈕字型大小 */
+    padding: 5px 10px; /* 調整按鈕內邊距 */
+    border-radius: 5px; /* 可選，讓按鈕邊角更圓滑 */
+}
+
+
+.custom-heading {
+    font-size: 14px;          /* 字型大小 */
+    font-weight: bold;        /* 字型加粗 */
+    color: #007bff;           /* 顏色 */
+    margin-top: 10px;         /* 上方間距 */
+    margin-bottom: 20px;         /* 上方間距 */
+    
+    font-family: "Microsoft JhengHei", sans-serif; /* 自定義字型 */
+}
+
+
+.nav-link {
+    font-size: 14px; /* 導航連結的字型大小 */
+    font-weight: bold;        /* 字型加粗 */
+
+}
+
+/* 導航欄控制按鈕樣式 */
+.toggle-navbar {
+    position: absolute; /* 固定在視窗內，不隨內容滾動 */
+
+    z-index: 2000; /* 確保按鈕在最上層 */
+    width: 50px; /* 按鈕寬度 */
+    height: 70px; /* 按鈕高度 */
+    border-radius: 0 5px 5px 0; /* 按鈕右側圓角 */
+    transition: left 0.3s ease; /* 添加過渡效果 */
+}
+
+/* 導航欄隱藏時，調整按鈕位置 */
+.toggle-navbar.navbar-hidden {
+    left: 0%;
+}
+
+
+
+/* 主框架容器使用 Flexbox 佈局 */
+.main-container {
+    display: flex;
+    height: 100vh; /* 設置高度為視窗高度 */
+}
+
+/* 頁面內容樣式 */
+.page-content {
+    flex: 1; /* 自動填滿剩餘空間 */
+    padding: 20px;
+    font-size: 14px;
+    transition: margin-left 0.3s ease; /* 添加過渡效果 */
+}
+
+

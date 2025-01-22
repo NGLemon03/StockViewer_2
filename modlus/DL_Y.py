@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import yfinance as yf
 
-from fetch_stock_list import urls_and_filenames
+from modlus.fetch_stock_list import urls_and_filenames
 
 # -------------------------------------------------------
 # 全域參數 (可自行調整或改成參數)

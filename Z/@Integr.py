@@ -1,8 +1,8 @@
-# ---------- Start of bear_market_analysis.py ----------
+# ---------- Start of modlus/bear_market_analysis.py ----------
 # bear_market_analysis.py
 import pandas as pd
 import numpy as np
-from investment_indicators import calculate_max_drawdown
+from StockViewer_2.modlus.investment_indicators import calculate_max_drawdown
 
 def analyze_bear_market(stock_data, start_date, end_date):
     """分析指定空頭期間的最大回撤、波動率、總收益率"""
@@ -30,9 +30,9 @@ def analyze_bear_market(stock_data, start_date, end_date):
 
     return pd.DataFrame(results).T
 
-# ---------- End of bear_market_analysis.py ----------
+# ---------- End of modlus/bear_market_analysis.py ----------
 
-# ---------- Start of config.py ----------
+# ---------- Start of modlus/config.py ----------
 # config.py
 import os
 import matplotlib
@@ -58,16 +58,16 @@ os.makedirs(output_dir, exist_ok=True)
 os.makedirs(heatmap_dir, exist_ok=True)
 os.makedirs(DL_dir, exist_ok=True)
 
-# ---------- End of config.py ----------
+# ---------- End of modlus/config.py ----------
 
-# ---------- Start of DL_Y.py ----------
+# ---------- Start of modlus/DL_Y.py ----------
 import os
 import re
 import time
 import pandas as pd
 import yfinance as yf
 
-from fetch_stock_list import urls_and_filenames
+from StockViewer_2.modlus.fetch_stock_list import urls_and_filenames
 
 # -------------------------------------------------------
 # 全域參數 (可自行調整或改成參數)
@@ -179,16 +179,16 @@ def download_stock_price(stockID, base_dir, start_date, end_date, interval='1d')
     stock_data.to_csv(price_file_path, encoding='utf-8-sig')
     print(f"{stockID} 股價數據已保存到 {price_file_path}")
 
-# ---------- End of DL_Y.py ----------
+# ---------- End of modlus/DL_Y.py ----------
 
-# ---------- Start of fetch_stock_list.py ----------
+# ---------- Start of modlus/fetch_stock_list.py ----------
 # fetch_stock_list.py
 import os
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from config import list_dir  # 引用 config.py 中的路徑
+from StockViewer_2.modlus.config import list_dir  # 引用 config.py 中的路徑
 
 urls_and_filenames = {
     'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2': os.path.join(list_dir, 'TWSE.csv'),
@@ -217,9 +217,9 @@ def get_stock_lists():
     for url, filename in urls_and_filenames.items():
         save_stock_list(url, filename)
 
-# ---------- End of fetch_stock_list.py ----------
+# ---------- End of modlus/fetch_stock_list.py ----------
 
-# ---------- Start of financial_statements_fetcher.py ----------
+# ---------- Start of modlus/financial_statements_fetcher.py ----------
 import os
 import time
 import random
@@ -236,7 +236,7 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from fetch_stock_list import urls_and_filenames  # {'上市網址': 'TWSE.csv', '上櫃網址': 'OTC.csv', ...}
+from StockViewer_2.modlus.fetch_stock_list import urls_and_filenames  # {'上市網址': 'TWSE.csv', '上櫃網址': 'OTC.csv', ...}
 
 # --------------------------------------------------------------------
 # 以下為原先 good_info.py 的設定，改名為 financial_statements_fetcher.py
@@ -890,105 +890,9 @@ if __name__ == "__main__":
     print("完成！")
 
 
-# ---------- End of financial_statements_fetcher.py ----------
+# ---------- End of modlus/financial_statements_fetcher.py ----------
 
-# ---------- Start of stock_data_processing.py ----------
-# stock_data_processing.py
-import os
-import re
-import pandas as pd
-import numpy as np
-import yfinance as yf
-
-from config import stock_dir
-from fetch_stock_list import urls_and_filenames
-
-file_data_cache = {}
-suffix_cache = {}
-
-def load_and_process_file(filepath):
-    """讀取上市/上櫃/興櫃清單 CSV，拆解出代號和名稱"""
-    df = pd.read_csv(filepath, encoding='utf_8_sig', header=None, skiprows=1)
-    df.columns = ['有價證券代號及名稱', 'ISIN', '上市日', '市場別', '產業別', 'CFICode', '備註']
-    df[['Code', 'Name']] = df['有價證券代號及名稱'].str.split('　', expand=True)
-    return df
-
-def ensure_file_data_cache(filepath):
-    """確保 file_data_cache 裏有上市/上櫃/興櫃的資料表"""
-    if filepath not in file_data_cache:
-        file_data_cache[filepath] = load_and_process_file(filepath)
-    return file_data_cache[filepath]
-
-def determine_suffix(code):
-    """根據 stock code 判斷 .TW 或 .TWO"""
-    if code in suffix_cache:
-        return suffix_cache[code]
-
-    for filepath in urls_and_filenames.values():
-        df = ensure_file_data_cache(filepath)
-        if code in df['Code'].values:
-            suffix = '.TW' if 'TWSE' in filepath else '.TWO'
-            suffix_cache[code] = suffix
-            return suffix
-
-    # 如果完全沒找到(可能是興櫃或國外標的)，給空字串
-    suffix_cache[code] = ''
-    return ''
-
-def download_data(stock_list):
-    """
-    檢查本地是否已有 CSV，若無則從 yfinance 下載。
-    回傳 DataFrame，columns = 每個標的；index = 日期
-    """
-    stock_data = {}
-    for stock in stock_list:
-        # 若是特殊符號開頭(指數)或僅字母(ETF代號?)，直接使用該符號
-        if stock.startswith('^') or re.match(r'^[A-Za-z]{3,4}$', stock):
-            stock_code = stock
-            csv_path = os.path.join(stock_dir, f"{stock_code}.csv")
-            try:
-                if os.path.exists(csv_path):
-                    df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
-                    stock_data[stock] = df['Adj Close']
-                else:
-                    df = yf.download(stock_code, period="15y")
-                    if not df.empty:
-                        df['Adj Close'].to_csv(csv_path)
-                        stock_data[stock] = df['Adj Close']
-                    else:
-                        print(f"無數據: {stock_code}, 跳過...")
-            except Exception as e:
-                print(f"下載 {stock_code} 時發生錯誤: {e}")
-            continue
-
-        # 判斷是否需要補後綴
-        suffix = determine_suffix(stock)
-        if not suffix:
-            print(f"{stock} 無法判斷後綴，跳過...")
-            continue
-
-        stock_code = f"{stock}{suffix}"
-        csv_path = os.path.join(stock_dir, f"{stock_code}.csv")
-
-        try:
-            if os.path.exists(csv_path):
-                df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
-                stock_data[stock] = df['Adj Close']
-            else:
-                df = yf.download(stock_code, period="15y")
-                if not df.empty:
-                    df['Adj Close'].to_csv(csv_path)
-                    stock_data[stock] = df['Adj Close']
-                else:
-                    print(f"無數據: {stock_code}, 跳過...")
-        except Exception as e:
-            print(f"下載 {stock_code} 時發生錯誤: {e}")
-
-    return pd.DataFrame(stock_data)
-
-# ---------- End of stock_data_processing.py ----------
-
-# ---------- Start of investment_indicators.py ----------
+# ---------- Start of modlus/investment_indicators.py ----------
 import numpy as np
 import pandas as pd
 import numpy_financial as npf
@@ -1264,572 +1168,512 @@ def calc_multiple_period_metrics(
         results.append(row)
     return pd.DataFrame(results)
 
-# ---------- End of investment_indicators.py ----------
+# ---------- End of modlus/investment_indicators.py ----------
 
-# ---------- Start of main.py ----------
-# main_app.py
-import streamlit as st
-
-def main():
-    
-    st.set_page_config(
-        page_title="我的多頁版投資分析平台",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    st.title("歡迎使用投資分析平台 (多頁版)")
-    st.write("""
-        左側是多頁面的導覽列，可在「個股基本資訊」、「財報」、「回測」、「比較」、「空頭」之間切換。
-        \n在每個分頁中，可各自使用您先前整合的邏輯及介面。
-    """)
-
-if __name__ == "__main__":
-    main()
-
-# ---------- End of main.py ----------
-
-# ---------- Start of streamlit_app.py ----------
-import streamlit as st
-
-
-
-# ====== 主程式 ======
-def streamlit_app():
-    
-    st.title("整合式多分頁介面")
-    st.sidebar.title("功能導覽")
-    page = st.sidebar.radio("選擇分頁", [
-        "個股基本資訊", 
-        "財報下載/預覽", 
-        "回測", 
-        "多標的比較", 
-        "空頭分析"
-    ])
-
-# ---------- End of streamlit_app.py ----------
-
-# ---------- Start of pages/1_個股基本資訊.py ----------
-# pages/1_個股基本資訊.py
-
-import streamlit as st
+# ---------- Start of modlus/stock_data_processing.py ----------
+# stock_data_processing.py
+import os
+import re
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import os
-from datetime import datetime
 import yfinance as yf
 
+from StockViewer_2.modlus.config import stock_dir
+from StockViewer_2.modlus.fetch_stock_list import urls_and_filenames
 
-# 專案內部模組
-from config import work_dir, DL_dir
-from investment_indicators import (
-    calc_multiple_period_metrics,
-    get_risk_free_rate
-)
-from financial_statements_fetcher import (
-    fetch_all_data,
-    close_driver
-)
-from DL_Y import download_stock_price
+file_data_cache = {}
+suffix_cache = {}
 
-today_date = pd.to_datetime(datetime.today().date())
+def load_and_process_file(filepath):
+    """讀取上市/上櫃/興櫃清單 CSV，拆解出代號和名稱"""
+    df = pd.read_csv(filepath, encoding='utf_8_sig', header=None, skiprows=1)
+    df.columns = ['有價證券代號及名稱', 'ISIN', '上市日', '市場別', '產業別', 'CFICode', '備註']
+    df[['Code', 'Name']] = df['有價證券代號及名稱'].str.split('　', expand=True)
+    return df
 
-st.set_page_config(page_title="個股基本資訊與多股票比較", layout="wide")
+def ensure_file_data_cache(filepath):
+    """確保 file_data_cache 裏有上市/上櫃/興櫃的資料表"""
+    if filepath not in file_data_cache:
+        file_data_cache[filepath] = load_and_process_file(filepath)
+    return file_data_cache[filepath]
 
-def page_basic_info():
-    st.title("個股基本資訊與多股票比較")
+def determine_suffix(code):
+    """根據 stock code 判斷 .TW 或 .TWO"""
+    if code in suffix_cache:
+        return suffix_cache[code]
 
-    # 區塊1: 下載參數
-    with st.expander("1) 資料下載參數", expanded=True):
-        colA, colB, colC, colD = st.columns([1,1,2,2])
-        with colA:
-            stock_id = st.text_input("主要股票(抓取Goodinfo數據)", value="2412")
-        with colB:
-            market_id = st.text_input("市場基準(計算用)", value="^TWII")
-        with colC:
-            other_ids_input = st.text_input("比較股票(逗號分隔)", value="2330,00713,006208")
-        with colD:
-            # 使用 columns 排列處理進度文字和動態更新
-            progress_col1, progress_col2 = st.columns([1, 3])
-            with progress_col1:
-                st.text("處理進度")  # 固定標題
-            with progress_col2:
-                progress_placeholder = st.empty()  # 動態更新的處理進度文字
+    for filepath in urls_and_filenames.values():
+        df = ensure_file_data_cache(filepath)
+        if code in df['Code'].values:
+            suffix = '.TW' if 'TWSE' in filepath else '.TWO'
+            suffix_cache[code] = suffix
+            return suffix
 
-            # 進度條放在下方
-            progress_bar = st.progress(0)
+    # 如果完全沒找到(可能是興櫃或國外標的)，給空字串
+    suffix_cache[code] = ''
+    return ''
 
-        colE, colF, colG, colH = st.columns(4)
-        with colE:
-            start_date = st.date_input("股價開始日期", pd.to_datetime("2000-01-01"))
-        with colF:
-            end_date   = st.date_input("股價結束日期", today_date)
-        with colG:
-            start_yq = st.text_input("財報起始季度(YYYY-Q)", value="2000-1")
-        with colH:
-            end_yq   = st.text_input("財報結束季度(YYYY-Q)", value="2024-4")
+def download_data(stock_list):
+    """
+    檢查本地是否已有 CSV，若無則從 yfinance 下載。
+    回傳 DataFrame，columns = 每個標的；index = 日期
+    """
+    stock_data = {}
+    for stock in stock_list:
+        # 若是特殊符號開頭(指數)或僅字母(ETF代號?)，直接使用該符號
+        if stock.startswith('^') or re.match(r'^[A-Za-z]{3,4}$', stock):
+            stock_code = stock
+            csv_path = os.path.join(stock_dir, f"{stock_code}.csv")
+            try:
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
+                    stock_data[stock] = df['Adj Close']
+                else:
+                    df = yf.download(stock_code, period="15y")
+                    if not df.empty:
+                        df['Adj Close'].to_csv(csv_path)
+                        stock_data[stock] = df['Adj Close']
+                    else:
+                        print(f"無數據: {stock_code}, 跳過...")
+            except Exception as e:
+                print(f"下載 {stock_code} 時發生錯誤: {e}")
+            continue
 
-        # 解析
+        # 判斷是否需要補後綴
+        suffix = determine_suffix(stock)
+        if not suffix:
+            print(f"{stock} 無法判斷後綴，跳過...")
+            continue
+
+        stock_code = f"{stock}{suffix}"
+        csv_path = os.path.join(stock_dir, f"{stock_code}.csv")
+
         try:
-            sy, sq = map(int, start_yq.split("-"))
-            ey, eq = map(int, end_yq.split("-"))
-        except:
-            st.error("財報季度格式錯誤(YYYY-Q)")
-            return
+            if os.path.exists(csv_path):
+                df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
+                stock_data[stock] = df['Adj Close']
+            else:
+                df = yf.download(stock_code, period="15y")
+                if not df.empty:
+                    df['Adj Close'].to_csv(csv_path)
+                    stock_data[stock] = df['Adj Close']
+                else:
+                    print(f"無數據: {stock_code}, 跳過...")
+        except Exception as e:
+            print(f"下載 {stock_code} 時發生錯誤: {e}")
 
-        # 按鈕: 下載
-        if st.button("下載或更新資料"):
-            all_stocks = [stock_id] + [market_id.strip()] + [x.strip() for x in other_ids_input.split(",") if x.strip()]
-            total_tasks = len(all_stocks)
+    return pd.DataFrame(stock_data)
 
-            for i, sid in enumerate(all_stocks):
-                status = f"正在處理 {sid} ({i + 1}/{total_tasks})"
-                progress_placeholder.text(status)  # 動態更新處理狀態
-                progress_bar.progress((i + 1) / total_tasks)
-            main_dir = os.path.join(DL_dir, stock_id)
-            os.makedirs(main_dir, exist_ok=True)
-            fetch_all_data(
-                stockID=stock_id,
-                base_dir=main_dir,
+# ---------- End of modlus/stock_data_processing.py ----------
+
+# ---------- Start of pages/page1_basic_info.py ----------
+import os
+import dash_core_components as dcc
+import plotly.graph_objs as go
+import pandas as pd
+from modlus.DL_Y import download_stock_price, fetch_all_data
+from modlus.config import DL_dir
+# 1) 個股基本資訊 Tab
+def render_page1_basic_info(stock_id, market_id, other_ids, start_date, end_date,
+                           start_yq, end_yq):
+    """
+    原先 pages/1_個股基本資訊.py 邏輯:
+      - fetch_all_data() 下載資料
+      - 比較多股票 Rebase 圖
+      - 多期(3/5/10/15/20年) 指標
+    這裡簡化示範: 只做「多股票 Rebase 圖」(and partial 3/5/10/15/20).
+    您可自行擴充。
+    """
+    container = []
+
+    # 下載 or 讀取 data
+    # 在 Dash 中，可能不會像 Streamlit 用 button 事件立即下載
+    # 若您仍要做 "下載" 按鈕，可以在callback中執行 fetch_all_data()
+
+    # 這裡示範：檢查 local CSV 有無，若無再下載
+    # 主要股票
+    main_dir = os.path.join(DL_dir, stock_id)
+    os.makedirs(main_dir, exist_ok=True)
+    # 假設您要自動下載 (若已存在就跳過)
+    fetch_all_data(
+        stockID=stock_id,
+        base_dir=main_dir,
+        start_date=str(start_date),
+        end_date=str(end_date),
+        start_year=int(start_yq.split("-")[0]),
+        start_quarter=int(start_yq.split("-")[1]),
+        end_year=int(end_yq.split("-")[0]),
+        end_quarter=int(end_yq.split("-")[1])
+    )
+
+    # 下載市場基準
+    all_stocks = [stock_id]
+    if market_id.strip():
+        all_stocks.append(market_id.strip())
+        market_dir = os.path.join(DL_dir, market_id.strip())
+        os.makedirs(market_dir, exist_ok=True)
+        download_stock_price(
+            stockID=market_id.strip(),
+            base_dir=market_dir,
+            start_date=str(start_date),
+            end_date=str(end_date)
+        )
+
+    # 下載其他股票
+    others = []
+    if other_ids:
+        others = [x.strip() for x in other_ids.split(",") if x.strip()]
+        for sid in others:
+            sid_dir = os.path.join(DL_dir, sid)
+            os.makedirs(sid_dir, exist_ok=True)
+            download_stock_price(
+                stockID=sid,
+                base_dir=sid_dir,
                 start_date=str(start_date),
-                end_date=str(end_date),
-                start_year=sy,
-                start_quarter=sq,
-                end_year=ey,
-                end_quarter=eq
+                end_date=str(end_date)
             )
+    all_stocks.extend(others)
 
-            # 市場指數(用於Alpha/Beta)
-            if market_id.strip():
-                market_dir = os.path.join(DL_dir, market_id)
-                os.makedirs(market_dir, exist_ok=True)
-                download_stock_price(
-                    stockID=market_id,
-                    base_dir=market_dir,
-                    start_date=str(start_date),
-                    end_date=str(end_date)
-                )
+    # -------------------------------
+    # 2) Rebase 圖
+    # -------------------------------
+    rebase_fig = go.Figure()
+    rebase_fig.update_layout(
+        title="多股票累積報酬(Rebase)比較",
+        hovermode='x unified'
+    )
+    for sid in all_stocks:
+        csvf = os.path.join(DL_dir, sid, f"{sid}_price.csv")
+        if not os.path.exists(csvf):
+            continue
+        dfp = pd.read_csv(csvf, parse_dates=["Date"], index_col="Date")
+        if dfp.empty:
+            continue
+        subp = dfp.loc[start_date:end_date].copy()
+        if subp.empty:
+            continue
+        if 'Close' not in subp.columns:
+            continue
+        subp['pct'] = subp['Close'].pct_change().fillna(0)
+        subp['cum'] = (1+subp['pct']).cumprod()
+        base = subp['cum'].iloc[0] if len(subp)>0 else 1
+        subp['rebase'] = subp['cum']/base
+        rebase_fig.add_trace(
+            go.Scatter(
+                x=subp.index,
+                y=subp['rebase'],
+                mode='lines',
+                name=sid
+            )
+        )
 
-            # 其他股票
-            other_ids = [x.strip() for x in other_ids_input.split(",") if x.strip()]
-            for sid in other_ids:
-                sid_dir = os.path.join(DL_dir, sid)
-                os.makedirs(sid_dir, exist_ok=True)
-                download_stock_price(
-                    stockID=sid,
-                    base_dir=sid_dir,
-                    start_date=str(start_date),
-                    end_date=str(end_date)
-                )
-            progress_placeholder.text("所有資料已處理完成！")
-            progress_bar.progress(1.0)
+    container.append(dcc.Graph(figure=rebase_fig))
+
+    return container
+# ---------- End of pages/page1_basic_info.py ----------
+
+# ---------- Start of pages/page2_financial.py ----------
+import os
+import dash_core_components as dcc
+import plotly.graph_objs as go
+import pandas as pd
+from modlus.config import DL_dir
+from plotly.subplots import make_subplots
+
+# 2) 財報下載/預覽 Tab (含 4 合 1 圖: 單季EPS&YOY、毛利率/營業利益率/淨利率、4Q EPS合計、月營收)
+#   原先 pages/2_財報.py
+def render_page2_financial(stock_id):
+    """
+    讀取EPS_Quar.csv, MonthlyRevenue.csv, 產生 2x2 subplot.
+    """
+    base_dir = os.path.join(DL_dir, stock_id)
+    # --- 讀取EPS_Quar ---
+    eps_f = os.path.join(base_dir, "EPS_Quar.csv")
+    df_quarter = pd.DataFrame()
+    if os.path.exists(eps_f):
+        df_quarter = pd.read_csv(eps_f)
+        # 簡化: 只抓 單季 EPS(元)_稅後EPS, 營業毛利, 營業收入, ...
+        # 這裡可直接套您pages/2_財報.py的函式 => 先略寫
+        # ... (與您pages/2_財報.py相同處理)...
+
+    # (這裡為了示範，我們用簡化假資料)
+    df_q = pd.DataFrame({
+       'Date': pd.date_range("2023-01-01", periods=4, freq='Q'),
+       'EPS': [1.2, 1.3, 1.1, 1.4],
+       'YOY': [0.05,0.08,-0.1,0.15],
+       'GrossMargin': [35,36,34,37],
+       'OperatingMargin': [25,26,24,26],
+       'NetMargin': [20,21,19,22],
+    }).set_index('Date')
+
+    # ---- 月營收 (示範用假資料) ----
+    df_month = pd.DataFrame({
+       'Date': pd.date_range("2023-01-01", periods=6, freq='MS'),
+       'Revenue': [180,190,170,200,210,205]
+    }).set_index('Date')
+
+    # 建立 2x2 subplots
+    fig = make_subplots(
+        rows=2, cols=2,
+        shared_xaxes=True,
+        subplot_titles=["(A) 單季EPS & YOY","(B) 毛利/營業/淨利率",
+                        "(C) 近四季EPS合計","(D) 月營收" ],
+        vertical_spacing=0.12
+    )
+
+    # (A) 單季EPS (Bar) + YOY (Line,右軸)
+    fig.add_trace(
+        go.Bar(
+            x=df_q.index, y=df_q['EPS'], name="EPS"
+        ),
+        row=1, col=1
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_q.index,
+            y=df_q['YOY']*100,
+            name="EPSYOY(%)",
+            yaxis='y2'
+        ),
+        row=1, col=1
+    )
+    # 設定右軸
+    fig.update_layout(
+        yaxis2=dict(
+            overlaying='y',
+            side='right'
+        )
+    )
+
+    # (B) 三條線
+    fig.add_trace(
+        go.Scatter(
+            x=df_q.index, y=df_q['GrossMargin'], name="毛利率(%)"
+        ),
+        row=1, col=2
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_q.index, y=df_q['OperatingMargin'], name="營業利率(%)"
+        ),
+        row=1, col=2
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_q.index, y=df_q['NetMargin'], name="淨利率(%)"
+        ),
+        row=1, col=2
+    )
+
+    # (C) 近四季 EPS 合計(假: 先把EPS累加)
+    cumsum_val = df_q['EPS'].cumsum()
+    fig.add_trace(
+        go.Bar(
+            x=cumsum_val.index, y=cumsum_val, name="近四季EPS合計"
+        ),
+        row=2, col=1
+    )
+
+    # (D) 月營收
+    fig.add_trace(
+        go.Scatter(
+            x=df_month.index, y=df_month['Revenue'],
+            name="月營收(億)"
+        ),
+        row=2, col=2
+    )
+
+    fig.update_layout(
+        title=f"{stock_id} 財報分析 (示範)",
+        hovermode='x unified',
+        height=800
+    )
+
+    return dcc.Graph(figure=fig)
+# ---------- End of pages/page2_financial.py ----------
+
+# ---------- Start of pages/page3_backtest.py ----------
+
+# ---------- End of pages/page3_backtest.py ----------
+
+# ---------- Start of pages/page4_compare.py ----------
+
+# ---------- End of pages/page4_compare.py ----------
+
+# ---------- Start of pages/page5_bear.py ----------
+from dash import html, dcc
+from modlus.bear_market_analysis import analyze_bear_market
+from modlus.stock_data_processing import download_data
+def render_page5_bear(stock_list):
+    """
+    analyze_bear_market(stock_data, start_date, end_date)
+    """
+    df = download_data(stock_list)
+    if df.empty:
+        return html.Div("無可用股價資料")
+
+    # 假設預設兩段區間
+    # 這裡不做互動輸入, 直接寫死
+    period_map = {
+        "疫情": ("2020-01-01","2020-05-01"),
+        "FED升息":("2022-01-01","2022-12-31")
+    }
+
+    children_list = []
+    for label,(sd,ed) in period_map.items():
+        subres = analyze_bear_market(df, sd, ed)
+        if subres.empty:
+            children_list.append(html.Div(f"{label} 無資料"))
+            continue
+        # Convert to table
+        subres_html = subres.style.format("{:.4f}").to_html()
+        children_list.append(html.H4(f"{label} : {sd} ~ {ed}"))
+        children_list.append(html.Div([
+            dcc.Markdown(subres_html, dangerously_allow_html=True)
+        ]))
+    return html.Div(children_list)
+
+# ---------- End of pages/page5_bear.py ----------
+
+# ---------- Start of dash_app.py ----------
+# dash_app.py
+import dash
+from dash import dcc, html, Input, Output, State
+import plotly.express as px
+import pandas as pd
+import numpy as np
+import os
+from datetime import datetime
+from pages.page1_basic_info import render_page1_basic_info
+from pages.page2_financial import render_page2_financial
+from pages.page3_backtest import render_page3_backtest
+from pages.page4_compare import render_page4_compare
+from pages.page5_bear import render_page5_bear
+# ====== 引用您原有的模組 =======
+# (請確保 bear_market_analysis.py, config.py, DL_Y.py, fetch_stock_list.py,
+#  financial_statements_fetcher.py, investment_indicators.py, stock_data_processing.py
+#  都在同一個資料夾下，或是一個 modules/ 子資料夾中，也可以根據您實際需求來 import)
+
+from StockViewer_2.modlus.config import DL_dir  # 例如 config.py 裡定義了 DL_dir
+from StockViewer_2.modlus.DL_Y import download_stock_price
+from StockViewer_2.modlus.fetch_stock_list import get_stock_lists
+from StockViewer_2.modlus.financial_statements_fetcher import fetch_all_data, close_driver
+from StockViewer_2.modlus.investment_indicators import (
+    get_risk_free_rate,
+    calc_multiple_period_metrics,
+    calculate_sharpe,
+    calculate_max_drawdown,
+    calculate_annualized_return,
+    calculate_irr_from_prices
+)
+from StockViewer_2.modlus.bear_market_analysis import analyze_bear_market
+from StockViewer_2.modlus.stock_data_processing import download_data
+# ==============================================
+
+# ====== 建立 Dash App ======
+app = dash.Dash(__name__)
+app.title = "Dash投資分析平台"
+
+# ----------------------------------------------------------------
+#  下方函式為「過去 Streamlit pages/xxx.py」的核心邏輯 -> 現改造成Dash callbacks
+# ----------------------------------------------------------------
 
 
 
-    with st.expander("2) 多股票指標比較(Rebase圖)", expanded=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            analysis_start_date = st.date_input("分析起始日", pd.to_datetime("2010-01-01"))
-        with col2:
-            analysis_end_date = st.date_input("分析結束日", today_date)
 
+# =================================================
+# Dash App Layout (多 Tab)
+# =================================================
+app.layout = html.Div([
+    html.H1("Dash 投資分析平台 (多Tab示範)"),
+
+    html.Div([
+        # 全域輸入
+        html.Label("主要股票(抓取Goodinfo數據)"),
+        dcc.Input(id='main_stock_id', type='text', value='2412', style={'width':'100px'}),
+        html.Label("市場基準(計算用)"),
+        dcc.Input(id='market_id', type='text', value='^TWII', style={'width':'100px'}),
+        html.Label("比較股票(逗號分隔)"),
+        dcc.Input(id='other_ids', type='text', value='2330,00713,006208', style={'width':'200px'}),
+    ], style={'marginBottom':'10px'}),
+
+    html.Div([
+        # 日期區
+        html.Label("股價開始日期"),
+        dcc.Input(id='start_date', type='text', value='2000-01-01', style={'width':'120px'}),
+        html.Label("股價結束日期"),
+        dcc.Input(id='end_date', type='text', value=datetime.today().strftime("%Y-%m-%d"), style={'width':'120px'}),
+        # 財報季度
+        html.Label("財報起始季度(YYYY-Q)"),
+        dcc.Input(id='start_yq', type='text', value='2000-1', style={'width':'80px'}),
+        html.Label("財報結束季度(YYYY-Q)"),
+        dcc.Input(id='end_yq', type='text', value='2024-4', style={'width':'80px'}),
+    ], style={'marginBottom':'10px'}),
+
+    dcc.Tabs(id='tabs', value='tab1', children=[
+        dcc.Tab(label="個股基本資訊", value='tab1'),
+        dcc.Tab(label="財報下載/預覽", value='tab2'),
+        dcc.Tab(label="回測", value='tab3'),
+        dcc.Tab(label="多標的比較", value='tab4'),
+        dcc.Tab(label="空頭分析", value='tab5'),
+    ]),
+    html.Div(id='tabs_content', style={'marginTop':'20px'})
+])
+
+
+# =================================================
+# Callbacks
+# =================================================
+@app.callback(
+    Output('tabs_content','children'),
+    Input('tabs','value'),
+    State('main_stock_id','value'),
+    State('market_id','value'),
+    State('other_ids','value'),
+    State('start_date','value'),
+    State('end_date','value'),
+    State('start_yq','value'),
+    State('end_yq','value')
+)
+def render_tabs(tab, stock_id, market_id, other_ids, sdate, edate, syq, eyq):
+    """
+    切換 Tab 時，根據 tab=tabX 來呼叫對應的 render_xxx 函式
+    """
+    if tab == 'tab1':
+        return html.Div(render_page1_basic_info(
+            stock_id, market_id, other_ids,
+            sdate, edate, syq, eyq
+        ))
+    elif tab == 'tab2':
+        return render_page2_financial(stock_id)
+    elif tab == 'tab3':
+        # 簡化: 只回測 main_stock_id + other_ids
         all_stocks = [stock_id]
         if market_id.strip():
             all_stocks.append(market_id.strip())
-        others = [x.strip() for x in other_ids_input.split(",") if x.strip()]
-        all_stocks.extend(others)
-
-        cum_df = pd.DataFrame()
-        for sid in all_stocks:
-            csvf = os.path.join(DL_dir, sid, f"{sid}_price.csv")
-            if not os.path.exists(csvf):
-                st.warning(f"{sid}_price.csv 不存在，請先下載")
-                continue
-            try:
-                dfp = pd.read_csv(csvf, parse_dates=["Date"], index_col="Date")
-                dfp.index = dfp.index.tz_localize(None)
-                subp = dfp.loc[analysis_start_date:analysis_end_date].copy()
-                if subp.empty:
-                    st.warning(f"{sid} 在此區間無資料")
-                    continue
-                subp["pct"] = subp["Close"].pct_change().fillna(0)
-                cprod = (1 + subp["pct"]).cumprod()
-                basev = cprod.iloc[0]
-                subp["rebase"] = cprod / basev
-                cum_df[sid] = subp["rebase"]
-            except Exception as e:
-                st.error(f"處理 {sid} 發生錯誤: {e}")
-
-        if not cum_df.empty:
-            fig = px.line(cum_df, x=cum_df.index, y=cum_df.columns,
-                          title="多股票累積報酬(Rebase)比較",
-                          labels={"value": "累積報酬","variable": "股票"})
-            fig.update_layout(legend=dict(orientation="h"))
-            st.plotly_chart(fig, use_container_width=True)
-
-    with st.expander("3) 多期(3/5/10/15/20年) 指標", expanded=False):
-        as_of_dt = pd.Timestamp(analysis_end_date)
-        tnxf = os.path.join(DL_dir, "^TNX", "^TNX_price.csv")
-        daily_rf = 0.0
-        yearly_rf  = 0.01
-        if os.path.exists(tnxf):
-            try:
-                dftnx = pd.read_csv(tnxf, parse_dates=["Date"], index_col="Date")
-                dftnx.index = dftnx.index.tz_localize(None)
-                daily_rf, yearly_rf = get_risk_free_rate(dftnx.loc[:as_of_dt])
-            except:
-                st.warning("解析 ^TNX_price.csv 失敗, rf=0")
-
-        use_price_type = st.radio("計算使用", ["Close","Adj Close"], index=0)
-
-        all_syms = [stock_id]
+        if other_ids:
+            all_stocks.extend([x.strip() for x in other_ids.split(",") if x.strip()])
+        return render_page3_backtest(all_stocks)
+    elif tab == 'tab4':
+        # 多標的比較
+        all_stocks = [stock_id]
         if market_id.strip():
-            all_syms.append(market_id.strip())
-        all_syms.extend(others)
-
-        market_df = pd.DataFrame()
+            all_stocks.append(market_id.strip())
+        if other_ids:
+            all_stocks.extend([x.strip() for x in other_ids.split(",") if x.strip()])
+        return render_page4_compare(all_stocks)
+    else:
+        # tab5: 空頭
+        all_stocks = [stock_id]
         if market_id.strip():
-            mkt_csv = os.path.join(DL_dir, market_id.strip(), f"{market_id.strip()}_price.csv")
-            if os.path.exists(mkt_csv):
-                mdf = pd.read_csv(mkt_csv, parse_dates=["Date"], index_col="Date")
-                mdf.index = mdf.index.tz_localize(None)
-                market_df = mdf
+            all_stocks.append(market_id.strip())
+        if other_ids:
+            all_stocks.extend([x.strip() for x in other_ids.split(",") if x.strip()])
+        return render_page5_bear(all_stocks)
 
-        from investment_indicators import calc_multiple_period_metrics
-        multi_data = []
-        for sid in all_syms:
-            cf = os.path.join(DL_dir, sid, f"{sid}_price.csv")
-            if not os.path.exists(cf):
-                continue
-            dfp = pd.read_csv(cf, parse_dates=["Date"], index_col="Date")
-            dfp.index = dfp.index.tz_localize(None)
-            subp = dfp.loc[:as_of_dt]
-            if subp.empty:
-                continue
-
-            df_metrics = calc_multiple_period_metrics(
-                stock_df=subp,
-                as_of_date=as_of_dt,
-                years_list=[3,5,10,15,20],
-                market_df=market_df,
-                daily_rf_return=daily_rf,
-                use_adj_close=(use_price_type=="Adj Close"),
-                freq_for_reg="W",       # 月度回歸
-                rf_annual_rate=yearly_rf 
-            )
-            df_metrics["股票"] = sid
-            multi_data.append(df_metrics)
-
-        if not multi_data:
-            st.info("無可顯示之多期指標")
-            return
-
-        # 合併
-        merged_df = pd.concat(multi_data, ignore_index=True)
-        # pivot:  index="股票", columns="Years"
-        pivoted = merged_df.pivot(index="股票", columns="Years")
-        # pivoted 將有多層欄位: ( 指標 , 年 ) 
-        # st.write(pivoted)  # Debug
-
-        # === 表1
-        st.markdown("回報及風險表現")
-        st.markdown("**Sharpe**：衡量每單位風險帶來的回報，數值越高代表回報效率越高", help="適合挑選夏普比率高的資產，因為這些資產能穩定獲利，值得投資")
-        st.markdown("**Sortino**：專注於下行風險，僅考量虧損風險而忽略收益，數值越高代表虧損風險越小", help="適合降低虧損風險，挑選Sortino比率高的資產更能控制風險")
-        st.markdown("**Alpha**：評估投資是否跑贏市場基準，正值表示超額回報", help="強調超額回報，但不考慮風險或波動")
-        st.markdown("**Beta**：衡量資產的波動性與市場的聯動性數值=1時與市場同步，>1時波動性更高，<1時則更穩定", help="用來判斷資產相對於市場的波動程度")
-
-
-
-        try:
-            df_sh = pivoted[["Sharpe","Sortino","Alpha","Beta"]].copy()
-            # df_sh 會是一個 2-level columns: top=[Sharpe, Sortino], sub=3,5,10,15,20
-            df_sh.index.name = None
-            # 多層欄位通常預設 columns.names = ['指標','Years'] 或 [None,'Years']，改成全部 None
-            df_sh.columns.names = [None, None]
-            rename_dict = {
-                "Sharpe": "Sharpe",
-                "Sortino": "Sortino",
-                "Alpha": "Alpha(%)",
-                "Beta": "Beta"
-            }
-            df_sh.rename(columns=rename_dict, level=0, inplace=True)   
-
-            # MDD,AnnualVol 都是 0.xx => 轉百分比
-
-            # 將 (Sharpe,3) => Sharpe_3, (Sortino,5) => Sortino_5, ...
-            format_dict = {
-                col: "{:.1f}" if col[0] == "Alpha(%)" else "{:.2f}"
-                for col in df_sh.columns
-            }
-
-            html_table = (
-                df_sh.style
-                    .set_properties(**{'text-align': 'center'})
-                    .format(format_dict)
-                    .to_html()
-            )
-            st.markdown(f"<div style='text-align:center;'>{html_table}</div>", unsafe_allow_html=True)
-        except KeyError:
-            st.write("無資料")
-
-
-        # === 表2
-        st.markdown("資產表現")
-        st.markdown("**最大回撤**：歷史上資產的最大虧損幅度，數值越大風險越高", help="選擇最大回撤小的資產，可以減輕虧損時的心理壓力")
-        st.markdown("**年化波動率**：衡量資產價格的波動幅度，數值越高代表波動越大，風險越高", help="波動率低的資產更適合追求穩定回報的投資者")
-        st.markdown("**定期定額年化報酬**：模擬每月固定金額投資的年化收益率，數值越高越有吸引力", help="可用於判斷資產是否適合採用定期定額的投資方式")
-        st.markdown("**年平均報酬**：每年的平均收益率，最直觀的衡量回報表現的標準", help="年平均報酬越高，資產的投資吸引力越強")
-        try:
-            df_mvol = pivoted[["MDD","AnnualVol","DCA_IRR","AnnualReturn"]].copy()
-            # 移除索引、欄位層級的名字 (比方說 pivoted 後會自動有 columns.name="Years")
-            df_mvol.index.name = None
-            # 多層欄位通常預設 columns.names = ['指標','Years'] 或 [None,'Years']，改成全部 None
-            df_mvol.columns.names = [None, None]
-            rename_dict = {
-                "MDD":        "最大回撤(%)",
-                "AnnualVol":  "年化波動率(%)",
-                "DCA_IRR":    "定期定額年化報酬(%)",
-                "AnnualReturn":"年平均報酬(%)"
-            }
-            df_mvol.rename(columns=rename_dict, level=0, inplace=True)   
-
-            # MDD,AnnualVol 都是 0.xx => 轉百分比
-
-            # 將 (Sharpe,3) => Sharpe_3, (Sortino,5) => Sortino_5, ...
-
-            html_table = (
-                df_mvol.style
-                    .set_properties(**{'text-align': 'center'})
-                    .format("{:.1f}")
-                    .to_html()
-            )
-            st.markdown(f"<div style='text-align:center;'>{html_table}</div>", unsafe_allow_html=True)
-        except KeyError:
-            st.write("無資料")
-
-
-def main():
-    page_basic_info()
 
 if __name__ == "__main__":
-    main()
+    app.run_server(debug=True, port=27451)
 
-# ---------- End of pages/1_個股基本資訊.py ----------
-
-# ---------- Start of pages/2_財報.py ----------
-# pages/2_財報.py
-import streamlit as st
-import pandas as pd
-import numpy as np
-from config import work_dir
-
-
-# 可引用您的抓財報模組
-# from financial_statements_fetcher import (
-#     download_stock_price,
-#     save_html,
-#     parse_html_with_multi_layer_headers,
-#     ...
-# )
-
-def page_financials():
-    st.header("財報下載/預覽")
-    st.write("此處可擴充讀取個股已下載的財報 CSV，並做進一步解析。")
-
-    # 亦可加上資料路徑輸入
-    stock_id = st.text_input("輸入股票代號以讀取其財報資料", value="2412")
-    base_dir = f"{work_dir}/{stock_id}"
-    st.write(f"目前預設讀取目錄：{base_dir}")
-
-    # 範例：顯示可能存在的財報檔案列表
-    import os
-    files_in_dir = os.listdir(base_dir) if os.path.exists(base_dir) else []
-    csv_files = [f for f in files_in_dir if f.endswith(".csv")]
-    if csv_files:
-        selected_csv = st.selectbox("選擇要預覽的 CSV 檔", options=csv_files)
-        if selected_csv:
-            csv_path = os.path.join(base_dir, selected_csv)
-            df = pd.read_csv(csv_path)
-            st.write(f"檔案：{selected_csv}")
-            st.dataframe(df.head(50))
-    else:
-        st.warning("該資料夾尚無任何 CSV 檔。請先至『個股基本資訊』頁面下載。")
-
-page_financials()
-# ---------- End of pages/2_財報.py ----------
-
-# ---------- Start of pages/3_回測.py ----------
-# pages/3_回測.py
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-from fetch_stock_list import get_stock_lists
-from stock_data_processing import download_data
-from investment_indicators import calculate_irr_from_prices
-
-# from investment_indicators import calculate_max_drawdown, ...
-
-def page_backtest():
-    st.header("簡易回測")
-    st.write("在此可進行如定期定額 IRR、Shapre、MDD 等指標回測。")
-
-    # 下載或讀取股價
-    get_stock_lists()  # 先更新上市、上櫃清單
-    default_stock_list = ["2412", "00713", "^IRX"]
-    stock_list = st.multiselect("選擇要回測的標的", default_stock_list, default=default_stock_list)
-
-    st.write("下載股價中...")
-    stock_data = download_data(stock_list)
-    st.success("股價下載完成。")
-
-    invest_amt = st.number_input("每月定期定額(負值表示支出)", value=-1000, step=100)
-
-    irr_dict = {}
-    for s in stock_list:
-        if s not in stock_data.columns:
-            irr_dict[s] = np.nan
-            continue
-        px = stock_data[s].dropna()
-        if len(px) < 2:
-            irr_dict[s] = np.nan
-        else:
-            irr_dict[s] = calculate_irr_from_prices(px, investment_per_month=invest_amt)
-
-    st.write("定期定額IRR(年化)")
-    df_irr = pd.DataFrame({"IRR(年化)": irr_dict})
-    st.dataframe(df_irr.style.format("{:.2%}"))
-
-
-page_backtest()
-
-# ---------- End of pages/3_回測.py ----------
-
-# ---------- Start of pages/4_比較.py ----------
-# pages/4_比較.py
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
-
-from fetch_stock_list import get_stock_lists
-from stock_data_processing import download_data
-from investment_indicators import calculate_sharpe
-from investment_indicators import (
-    calculate_irr_from_prices,
-    calculate_sharpe,
-    calculate_max_drawdown,
-    calculate_annualized_return
-)
-
-def page_compare():
-    st.header("多標的比較 (相關係數、Sharpe、MDD)")
-    st.write("在此可一次比較多檔股票或ETF的表現。")
-
-    # 下載或讀取股價
-    get_stock_lists()
-    default_stock_list = ["2412", "2303", "2330", "^IRX"]
-    stock_list = st.multiselect("比較標的", default_stock_list, default=default_stock_list)
-
-    stock_data = download_data(stock_list)
-    st.write("資料範圍:", stock_data.index.min(), "~", stock_data.index.max())
-    st.write(f"資料筆數: {len(stock_data)}")
-
-    if not stock_data.empty:
-        period = st.selectbox("計算期間(交易日)", [60, 120, 240, 480], index=1)
-        subset = stock_data[-period:].dropna(how='all', axis=1)
-        if subset.empty:
-            st.warning("近期無可用股價資料。")
-            return
-        corr_matrix = subset.corr()
-        fig_corr = plt.figure(figsize=(6,5))
-        sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", square=True)
-        plt.title(f"Correlation Heatmap (最後{period}交易日)")
-        st.pyplot(fig_corr)
-
-        # 計算 Sharpe, MDD, 年化報酬
-        sharpe_dict = {}
-        mdd_dict = {}
-        ann_dict = {}
-        for s in subset.columns:
-            sh = calculate_sharpe(subset[s], period=period)
-            mdd = calculate_max_drawdown(subset[s])
-            ann = calculate_annualized_return(subset[s], period=period)
-            sharpe_dict[s] = sh
-            mdd_dict[s] = mdd
-            ann_dict[s] = ann
-
-        df_compare = pd.DataFrame({
-            "Sharpe": sharpe_dict,
-            "MDD": mdd_dict,
-            "AnnualReturn": ann_dict
-        })
-        st.dataframe(df_compare.style.format("{:.4f}"))
-
-page_compare()
-
-# ---------- End of pages/4_比較.py ----------
-
-# ---------- Start of pages/5_空頭.py ----------
-# pages/5_空頭.py
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
-
-from fetch_stock_list import get_stock_lists
-from stock_data_processing import download_data
-from investment_indicators import calculate_sharpe
-from investment_indicators import (
-    calculate_irr_from_prices,
-    calculate_sharpe,
-    calculate_max_drawdown,
-    calculate_annualized_return
-)
-
-from bear_market_analysis import analyze_bear_market
-
-
-def page_bear():
-    st.header("空頭期間分析")
-    get_stock_lists()
-    default_stock_list = ["2412", "2330"]
-    stock_list = st.multiselect("要分析的標的", default_stock_list, default=default_stock_list)
-
-    stock_data = download_data(stock_list)
-    if stock_data.empty:
-        st.warning("無可用股價資料。")
-        return
-
-    start_date_1 = st.date_input("空頭1開始", pd.to_datetime("2020-01-01"))
-    end_date_1 = st.date_input("空頭1結束", pd.to_datetime("2020-05-01"))
-    start_date_2 = st.date_input("空頭2開始", pd.to_datetime("2022-01-01"))
-    end_date_2 = st.date_input("空頭2結束", pd.to_datetime("2022-12-31"))
-
-    bear_periods = {
-        "疫情": (start_date_1, end_date_1),
-        "FED升息": (start_date_2, end_date_2)
-    }
-    for name, (sd, ed) in bear_periods.items():
-        st.write(f"#### {name}: {sd} ~ {ed}")
-        df_res = analyze_bear_market(stock_data, str(sd), str(ed))
-        if df_res.empty:
-            st.write("該期間無效或無資料。")
-            continue
-        df_res_show = df_res.loc[df_res.index.intersection(stock_list)]
-        st.dataframe(df_res_show.style.format("{:.4f}"))
-
-        for col in ["最大回撤", "波動率", "總收益率"]:
-            if col in df_res_show.columns:
-                fig_bar = px.bar(
-                    df_res_show,
-                    x=df_res_show.index,
-                    y=col,
-                    title=f"{name} - {col}"
-                )
-                st.plotly_chart(fig_bar, use_container_width=True)
-
-# ---------- End of pages/5_空頭.py ----------
+# ---------- End of dash_app.py ----------
 

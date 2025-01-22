@@ -4,17 +4,17 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-from fetch_stock_list import get_stock_lists
-from stock_data_processing import download_data
-from investment_indicators import calculate_sharpe
-from investment_indicators import (
+from StockViewer_2.modlus.fetch_stock_list import get_stock_lists
+from StockViewer_2.modlus.stock_data_processing import download_data
+from StockViewer_2.modlus.investment_indicators import calculate_sharpe
+from StockViewer_2.modlus.investment_indicators import (
     calculate_irr_from_prices,
     calculate_sharpe,
     calculate_max_drawdown,
     calculate_annualized_return
 )
 
-from bear_market_analysis import analyze_bear_market
+from StockViewer_2.modlus.bear_market_analysis import analyze_bear_market
 
 
 def page_bear():

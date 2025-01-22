@@ -15,6 +15,7 @@ file_names = [
     "CashFlow.csv",
     "EPS_Year.csv",
     "EPS_Quar.csv",
+    "2412_price.csv"
 ]
 
 # 定義文件路徑

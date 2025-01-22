@@ -1,7 +1,7 @@
 # bear_market_analysis.py
 import pandas as pd
 import numpy as np
-from investment_indicators import calculate_max_drawdown
+from StockViewer_2.modlus.investment_indicators import calculate_max_drawdown
 
 def analyze_bear_market(stock_data, start_date, end_date):
     """分析指定空頭期間的最大回撤、波動率、總收益率"""

@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-from config import stock_dir
-from fetch_stock_list import urls_and_filenames
+from StockViewer_2.modlus.config import stock_dir
+from StockViewer_2.modlus.fetch_stock_list import urls_and_filenames
 
 file_data_cache = {}
 suffix_cache = {}
